@@ -1,0 +1,129 @@
+---
+
+services:
+  gym-app:
+    image: gym-app:local
+    ports:
+      - "8082:8082"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      sso:
+        condition: service_started
+    environment:
+      - CONFIG_PATH=${CONFIG_PATH}
+      - GYM_DB_PASSWORD=${GYM_DB_PASSWORD}
+    networks:
+      - gym
+    restart: always
+
+  db:
+    image: postgres:17-alpine3.21
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gym_db"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    environment:
+      - POSTGRES_PASSWORD=${GYM_DB_PASSWORD}
+      - POSTGRES_DB=gym_db
+    volumes:
+      - ./data/gym:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - gym
+
+  migrate-gym:
+    image: migrate/migrate
+    depends_on:
+      - db
+    volumes:
+      - ./migrations/gym:/migrations
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - |
+        echo "Waiting for gym-db...";
+        sleep 5;
+        migrate -path=/migrations -database "postgres://postgres:${GYM_DB_PASSWORD}@db:5432/gym_db?sslmode=disable" up
+    environment:
+      - GYM_DB_PASSWORD=${GYM_DB_PASSWORD}
+    networks:
+      - gym
+
+  redis:
+    image: redis:8-alpine3.21
+    restart: always
+    healthcheck:
+      test: ["CMD", "sh", "-c", "redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "16379:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - gym
+
+  sso:
+    image: sso-app:local
+    ports:
+      - "44044:44044"
+    healthcheck:
+      test: [ "CMD", "grpc_health_probe", "-addr=:44044" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      sso-db:
+        condition: service_healthy
+    environment:
+      - CONFIG_PATH=${CONFIG_PATH}
+      - SSO_DB_PASSWORD=${SSO_DB_PASSWORD}
+    networks:
+      - gym
+    restart: always
+
+  sso-db:
+    image: postgres:17-alpine3.21
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sso_db"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    environment:
+      - POSTGRES_PASSWORD=${SSO_DB_PASSWORD}
+      - POSTGRES_DB=sso_db
+    volumes:
+      - ./data/sso:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    networks:
+      - gym
+
+  migrate-sso:
+    image: migrate/migrate
+    depends_on:
+      - sso-db
+    volumes:
+      - ./migrations/sso:/migrations
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - |
+        echo "Waiting for sso-db...";
+        sleep 5;
+        migrate -path=/migrations -database "postgres://postgres:${SSO_DB_PASSWORD}@sso-db:5432/sso_db?sslmode=disable" up
+    environment:
+      - SSO_DB_PASSWORD=${SSO_DB_PASSWORD}
+    networks:
+      - gym
+
+networks:
+  gym:

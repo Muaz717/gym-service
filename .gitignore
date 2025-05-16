@@ -1,0 +1,7 @@
+/app/internal/storage/redis/data/dump.rdb
+.idea
+.mockery.yml
+app/docs
+data
+.env
+redis.conf

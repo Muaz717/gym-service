@@ -1,0 +1,26 @@
+version: "3"
+
+tasks:
+    migrations-up:
+      desc: Run migrations
+      cmds:
+        - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/sso_db --command=up
+    migrations-down:
+      desc: Rollback migrations
+      cmds:
+        - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/sso_db --command=down
+
+    test-migrations-up:
+        desc: Test migrations
+        cmds:
+            - go run ./cmd/migrator --migrations-path=./tests/migrations --storage-path=postgres:postgres@localhost:5432/sso_db --migrations-table=migrations_test --command=up
+    test-migrations-down:
+        desc: Rollback test migrations
+        cmds:
+            - go run ./cmd/migrator --migrations-path=./tests/migrations --storage-path=postgres:postgres@localhost:5432/sso_db --migrations-table=migrations_test --command=down
+
+
+    run-app:
+      desc: Run the application
+      cmds:
+        - go run cmd/sso/main.go --config=./config/local.yml
