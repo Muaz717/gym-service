@@ -1,0 +1,564 @@
+basePath: /api/v1
+definitions:
+  models.Person:
+    properties:
+      id:
+        type: integer
+      name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      phone:
+        type: string
+    required:
+    - name
+    - phone
+    type: object
+  models.PersonSubStrDate:
+    properties:
+      end_date:
+        description: Дата окончания
+        type: string
+      number:
+        description: Номер абонемента
+        type: string
+      person_id:
+        description: ID клиента
+        type: integer
+      start_date:
+        description: Дата начала
+        type: string
+      status:
+        description: Статус абонемента (active/frozen/completed)
+        type: string
+      subscription_id:
+        description: ID абонемента
+        type: integer
+    required:
+    - number
+    - person_id
+    - subscription_id
+    type: object
+  models.PersonSubscription:
+    properties:
+      end_date:
+        type: string
+      number:
+        type: string
+      person_id:
+        type: integer
+      start_date:
+        type: string
+      status:
+        type: string
+      subscription_id:
+        type: integer
+    type: object
+  models.Subscription:
+    properties:
+      duration_days:
+        description: Срок действия в днях
+        type: integer
+      freeze_days:
+        description: Количество допустимых дней заморозки
+        type: integer
+      id:
+        description: Номер абонемента
+        type: string
+      price:
+        description: Цена тарифа
+        type: number
+      title:
+        description: Название тарифа
+        type: string
+    type: object
+  response.Response:
+    properties:
+      error:
+        type: string
+      msg:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:8082
+info:
+  contact:
+    email: m.azizov03@mail.ru
+    name: Murad Golang Backend
+  description: Backend for Gym application
+  termsOfService: '"https://example.com/terms"'
+  title: Gym API
+  version: "1.0"
+paths:
+  /people:
+    get:
+      consumes:
+      - application/json
+      description: Find all people
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: People found
+          schema:
+            items:
+              $ref: '#/definitions/models.Person'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Find all people
+      tags:
+      - person
+  /people/add:
+    post:
+      consumes:
+      - application/json
+      description: Add a new person
+      parameters:
+      - description: Person
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/models.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Person added
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Add a new person
+      tags:
+      - person
+  /people/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a person
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Person deleted
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete a person
+      tags:
+      - person
+  /people/find:
+    get:
+      consumes:
+      - application/json
+      description: Find a person by name
+      parameters:
+      - description: Person name
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Person found
+          schema:
+            $ref: '#/definitions/models.Person'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Find a person by name
+      tags:
+      - person
+  /people/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a person
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Person
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/models.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Person updated
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update a person
+      tags:
+      - person
+  /person_sub:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех абонементов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.PersonSubStrDate'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Получить все абонементы
+      tags:
+      - person_sub
+  /person_sub/add:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новый абонемент
+      parameters:
+      - description: Абонемент
+        in: body
+        name: person_sub
+        required: true
+        schema:
+          $ref: '#/definitions/models.PersonSubStrDate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Абонемент добавлен
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Конфликт
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Добавить абонемент
+      tags:
+      - person_sub
+  /person_sub/delete/{number}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет абонемент по номеру
+      parameters:
+      - description: Номер абонемента
+        in: path
+        name: number
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Абонемент удален
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Абонемент не найден
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Удалить абонемент
+      tags:
+      - person_sub
+  /person_sub/find:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список абонементов клиента по имени
+      parameters:
+      - description: Имя клиента
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.PersonSubStrDate'
+            type: array
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Абонемент не найден
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Получить абонементы по имени
+      tags:
+      - person_sub
+  /person_sub/find/{number}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список абонементов клиента по номеру
+      parameters:
+      - description: Номер абонемента
+        in: path
+        name: number
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.PersonSubscription'
+            type: array
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Получить абонементы по номеру
+      tags:
+      - person_sub
+  /subscription:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех абонементов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список абонементов
+          schema:
+            items:
+              $ref: '#/definitions/models.Subscription'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Получить все абонементы
+      tags:
+      - subscription
+  /subscription/add:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новый абонемент
+      parameters:
+      - description: Абонемент
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/models.Subscription'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Абонемент добавлен
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Конфликт
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Добавить абонемент
+      tags:
+      - subscription
+  /subscription/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет абонемент по номеру
+      parameters:
+      - description: ID абонемента
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Абонемент удален
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Абонемент не найден
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Удалить абонемент
+      tags:
+      - subscription
+  /subscription/update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующий абонемент
+      parameters:
+      - description: ID абонемента
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Абонемент
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/models.Subscription'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Абонемент обновлен
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Не найдено
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Обновить абонемент
+      tags:
+      - subscription
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

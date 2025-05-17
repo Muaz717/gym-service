@@ -1,0 +1,32 @@
+env: local # dev, prod
+token_ttl: 12h
+app_id: 1
+
+# Http server config
+http_server:
+  host: "0.0.0.0"              # Привязываем к любому IP
+  port: "8082"
+  timeout: 4s
+  idle_timeout: 30s
+
+# DB config (PostgreSQL)
+db:
+  host: "localhost"
+  port: "5432"
+  username: postgres
+  dbname: gym_db
+  # Пароль подставляется через env-переменную DB_PASSWORD
+
+# Clients config
+clients:
+  sso:
+    host: "localhost"         # Имя GRPC-сервиса внутри сети Docker
+    port: "44044"
+    timeout: 4s
+    retries_count: 3
+
+# Redis config
+redis:
+  host: "localhost"         # Имя сервиса Redis в сети docker-compose
+  port: "6379"
+  dbredis: 0
