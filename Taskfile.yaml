@@ -1,0 +1,23 @@
+version: "3"
+
+tasks:
+  run:
+    desc: "Запустить приложение"
+    cmds:
+      - go run ./cmd/gym-app
+
+  migrations-up:
+    desc: Run migrations
+    cmds:
+      - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/gym_db --command=up
+  migrations-down:
+    desc: Rollback migrations
+    cmds:
+      - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/gym_db --command=down
+
+  redis:start:
+    desc: "Start Redis with config/config/redis.conf"
+    cmds:
+      - mkdir -p internal/storage/redis/data
+      - redis-server config/redis.conf
+    silent: false
