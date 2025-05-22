@@ -19,7 +19,7 @@ import (
 	"github.com/Muaz717/gym_app/app/internal/config"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/handlers/slogpretty"
 
-	_ "github.com/Muaz717/gym_app/app/docs"
+	_ "github.com/Muaz717/gym_app/app/docs/docs"
 	"log/slog"
 	"os"
 	"os/signal"

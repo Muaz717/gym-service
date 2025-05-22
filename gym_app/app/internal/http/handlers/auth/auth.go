@@ -36,6 +36,19 @@ func New(
 	}
 }
 
+// Login godoc
+// @Summary Login
+// @Description Login
+// @Security BearerAuth
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param login body models.LoginRequest true "Login"
+// @Success 200 {object} response.Response "Login successful"
+// @Failure 400 {object} response.Response "Bad request"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	const op = "handlers.auth.login"
 
@@ -61,10 +74,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	log.Info("login successful")
 
-	c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+	c.SetCookie("token", token, 360000, "/", "localhost", false, true)
 	c.JSON(http.StatusOK, response.OK("login successful"))
 }
 
+// RegisterNewUser godoc
+// @Summary Register new user
+// @Description Register new user
+// @Security BearerAuth
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param register body models.RegisterRequest true "Register"
+// @Success 200 {object} response.Response "User registered successfully"
+// @Failure 400 {object} response.Response "Bad request"
+// @Failure 409 {object} response.Response "Conflict"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /auth/register [post]
 func (h *AuthHandler) RegisterNewUser(c *gin.Context) {
 	const op = "handlers.auth.registerNewUser"
 
