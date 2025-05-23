@@ -21,3 +21,8 @@ tasks:
       - mkdir -p internal/storage/redis/data
       - redis-server config/redis.conf
     silent: false
+
+  proto-gen:
+    desc: "Generate proto files"
+    cmds:
+      - protoc --proto_path=./api --go_out=../../pkg --go-grpc_out=../../pkg --validate_out=lang=go:../../pkg api/sso/sso.proto

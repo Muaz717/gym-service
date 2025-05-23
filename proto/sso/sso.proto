@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package auth;
 
-import "validate/validate.proto";
+import "sso/validate/validate.proto";
 
-option go_package = "muaz.sso.v1;ssov1";
+option go_package = "pkg/sso;sso";
 
 // Auth is service for managing permissions and roles.
 service Auth {
@@ -60,4 +60,5 @@ message CheckTokenResponse {
   int64 user_id = 1;
   bool is_valid = 2;
   repeated string roles = 3;
+  string email = 4;
 }

@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: sso/sso.proto
 
-package ssov1
+package sso
 
 import (
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
@@ -463,6 +463,7 @@ type CheckTokenResponse struct {
 	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	IsValid       bool                   `protobuf:"varint,2,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
 	Roles         []string               `protobuf:"bytes,3,rep,name=roles,proto3" json:"roles,omitempty"`
+	Email         string                 `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -518,11 +519,18 @@ func (x *CheckTokenResponse) GetRoles() []string {
 	return nil
 }
 
+func (x *CheckTokenResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
 var File_sso_sso_proto protoreflect.FileDescriptor
 
 const file_sso_sso_proto_rawDesc = "" +
 	"\n" +
-	"\rsso/sso.proto\x12\x04auth\x1a\x17validate/validate.proto\"2\n" +
+	"\rsso/sso.proto\x12\x04auth\x1a\x1bsso/validate/validate.proto\"2\n" +
 	"\x0eIsAdminRequest\x12 \n" +
 	"\auser_id\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x06userId\",\n" +
 	"\x0fIsAdminResponse\x12\x19\n" +
@@ -545,18 +553,19 @@ const file_sso_sso_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"R\n" +
 	"\x11CheckTokenRequest\x12\x1d\n" +
 	"\x05token\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x05token\x12\x1e\n" +
-	"\x06app_id\x18\x02 \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\x05appId\"^\n" +
+	"\x06app_id\x18\x02 \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\x05appId\"t\n" +
 	"\x12CheckTokenResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x19\n" +
 	"\bis_valid\x18\x02 \x01(\bR\aisValid\x12\x14\n" +
-	"\x05roles\x18\x03 \x03(\tR\x05roles2\xa1\x02\n" +
+	"\x05roles\x18\x03 \x03(\tR\x05roles\x12\x14\n" +
+	"\x05email\x18\x04 \x01(\tR\x05email2\xa1\x02\n" +
 	"\x04Auth\x129\n" +
 	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x16.auth.RegisterResponse\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x126\n" +
 	"\aIsAdmin\x12\x14.auth.IsAdminRequest\x1a\x15.auth.IsAdminResponse\x123\n" +
 	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12?\n" +
 	"\n" +
-	"CheckToken\x12\x17.auth.CheckTokenRequest\x1a\x18.auth.CheckTokenResponseB\x13Z\x11muaz.sso.v1;ssov1b\x06proto3"
+	"CheckToken\x12\x17.auth.CheckTokenRequest\x1a\x18.auth.CheckTokenResponseB\rZ\vpkg/sso;ssob\x06proto3"
 
 var (
 	file_sso_sso_proto_rawDescOnce sync.Once

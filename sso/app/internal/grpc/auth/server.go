@@ -139,6 +139,7 @@ func (s *serverApi) CheckToken(ctx context.Context, req *ssov1.CheckTokenRequest
 		UserId:  claims.UserId,
 		IsValid: true,
 		Roles:   claims.Roles,
+		Email:   claims.Email,
 	}, nil
 
 }
