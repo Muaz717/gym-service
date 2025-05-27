@@ -76,6 +76,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns info about the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user info",
+                "responses": {
+                    "200": {
+                        "description": "Current user info",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "security": [
@@ -337,6 +368,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/people/find/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Find a person by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "person"
+                ],
+                "summary": "Find a person by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Person found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Person"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/people/update/{id}": {
             "put": {
                 "security": [
@@ -425,7 +511,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.PersonSubStrDate"
+                                "$ref": "#/definitions/dto.PersonSubResponse"
                             }
                         }
                     },
@@ -463,7 +549,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.PersonSubStrDate"
+                            "$ref": "#/definitions/models.PersonSubscription"
                         }
                     }
                 ],
@@ -550,14 +636,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/person_sub/find": {
+        "/person_sub/find/{id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Возвращает список абонементов клиента по имени",
+                "description": "Возвращает список абонементов клиента по ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -567,13 +653,13 @@ const docTemplate = `{
                 "tags": [
                     "person_sub"
                 ],
-                "summary": "Получить абонементы по имени",
+                "summary": "Получить абонементы по ID клиента",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Имя клиента",
-                        "name": "name",
-                        "in": "query",
+                        "type": "integer",
+                        "description": "ID клиента",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -583,7 +669,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.PersonSubStrDate"
+                                "$ref": "#/definitions/dto.PersonSubResponse"
                             }
                         }
                     },
@@ -594,7 +680,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Абонемент не найден",
+                        "description": "Клиент не найден",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -641,12 +727,70 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/models.PersonSubscription"
+                                "$ref": "#/definitions/dto.PersonSubResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Ошибка валидации",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/person_sub/find_by_name": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает список абонементов клиента по имени",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "person_sub"
+                ],
+                "summary": "Получить абонементы по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Имя клиента",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PersonSubResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Клиент не найден",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -869,6 +1013,35 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.PersonSubResponse": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "person_id": {
+                    "type": "integer"
+                },
+                "person_name": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "integer"
+                },
+                "subscription_title": {
+                    "type": "string"
+                }
+            }
+        },
         "models.LoginRequest": {
             "type": "object",
             "properties": {
@@ -900,7 +1073,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PersonSubStrDate": {
+        "models.PersonSubscription": {
             "type": "object",
             "required": [
                 "number",
@@ -909,7 +1082,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "end_date": {
-                    "description": "Дата окончания",
                     "type": "string"
                 },
                 "number": {
@@ -921,38 +1093,13 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "start_date": {
-                    "description": "Дата начала",
                     "type": "string"
                 },
                 "status": {
-                    "description": "Статус абонемента (active/frozen/completed)",
                     "type": "string"
                 },
                 "subscription_id": {
                     "description": "ID абонемента",
-                    "type": "integer"
-                }
-            }
-        },
-        "models.PersonSubscription": {
-            "type": "object",
-            "properties": {
-                "end_date": {
-                    "type": "string"
-                },
-                "number": {
-                    "type": "string"
-                },
-                "person_id": {
-                    "type": "integer"
-                },
-                "start_date": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "subscription_id": {
                     "type": "integer"
                 }
             }
@@ -990,6 +1137,23 @@ const docTemplate = `{
                 "title": {
                     "description": "Название тарифа",
                     "type": "string"
+                }
+            }
+        },
+        "models.User": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },

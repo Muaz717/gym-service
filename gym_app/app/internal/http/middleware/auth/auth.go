@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Muaz717/gym_app/app/internal/clients/sso/grpc"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
+	ssov1 "github.com/Muaz717/gym_app/app/pkg/sso"
 	"github.com/gin-gonic/gin"
 
 	"log/slog"
@@ -16,7 +17,7 @@ func AuthMiddleware(log *slog.Logger, ssoClient *grpc.SSOClient, appId int32, re
 	return func(c *gin.Context) {
 		const op = "middleware.AuthMiddleware"
 
-		log = log.With(
+		reqLog := log.With(
 			slog.String("op", op),
 		)
 
@@ -42,21 +43,20 @@ func AuthMiddleware(log *slog.Logger, ssoClient *grpc.SSOClient, appId int32, re
 
 		resp, err := ssoClient.CheckToken(c.Request.Context(), appId, token)
 		if err != nil {
-			log.Error("failed to check token", slog.String("op", op), sl.Error(err))
+			reqLog.Error("failed to check token", slog.String("op", op), sl.Error(err))
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token validation failed"})
 			return
 		}
 
-		log.Info("token check result",
-			slog.Bool("is_valid", resp.IsValid),
-			slog.Int64("user_id", resp.GetUserId()),
+		reqLog.Info("token check result",
+
 			slog.Any("roles", resp.Roles),
 			slog.String("token", token),
 			slog.Int("app_id", int(appId)),
 		)
 
 		if !resp.IsValid {
-			log.Warn("invalid token", slog.String("op", op), slog.String("token", token))
+			reqLog.Warn("invalid token", slog.String("op", op), slog.String("token", token))
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
 		}
@@ -70,7 +70,7 @@ func AuthMiddleware(log *slog.Logger, ssoClient *grpc.SSOClient, appId int32, re
 		}
 
 		if !hasRequiredRole {
-			log.Warn(fmt.Sprintf("%s role required", requiredRole), slog.String("op", op), slog.Int64("user_id", resp.GetUserId()))
+			reqLog.Warn(fmt.Sprintf("%s role required", requiredRole), slog.String("op", op), slog.Int64("user_id", resp.GetUserId()))
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("%s role required", requiredRole)})
 			return
 		}
@@ -80,4 +80,12 @@ func AuthMiddleware(log *slog.Logger, ssoClient *grpc.SSOClient, appId int32, re
 	}
 }
 
-//func GetUserFromContext(c *gin.Context)
+// GetUserFromContext достаёт пользователя (SSO CheckTokenResponse) из контекста gin
+func GetUserFromContext(c *gin.Context) (*ssov1.CheckTokenResponse, bool) {
+	val, exists := c.Get(userContextKey)
+	if !exists {
+		return nil, false
+	}
+	user, ok := val.(*ssov1.CheckTokenResponse)
+	return user, ok
+}

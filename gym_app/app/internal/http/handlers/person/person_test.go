@@ -3,15 +3,15 @@ package personHandler_test
 import (
 	"bytes"
 	"context"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
+	"github.com/Muaz717/gym_app/app/internal/http/handlers/person"
+	"github.com/Muaz717/gym_app/app/internal/http/handlers/person/mocks"
+	"github.com/Muaz717/gym_app/app/internal/lib/logger/handlers/slogdiscard"
+	"github.com/Muaz717/gym_app/app/internal/services/person"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/http/handlers/person"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/http/handlers/person/mocks"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/lib/logger/handlers/slogdiscard"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/models"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/services/person"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -73,7 +73,7 @@ func TestAddPerson(t *testing.T) {
 			tt.mockBehavior(serviceMock, tt.inputPerson)
 
 			// init handler
-			handler := personHandler.personHandler.New(context.Background(), slogdiscard.NewDiscardLogger(), serviceMock)
+			handler := personHandler.New(context.Background(), slogdiscard.NewDiscardLogger(), serviceMock)
 
 			// init router
 			r := gin.New()

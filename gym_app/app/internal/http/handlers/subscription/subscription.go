@@ -3,9 +3,9 @@ package membershipHandler
 import (
 	"context"
 	"errors"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/lib/api/response"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
-	"github.com/Muaz717/gym_app/app/internal/models"
 	personSubService "github.com/Muaz717/gym_app/app/internal/services/person_sub"
 	"github.com/gin-gonic/gin"
 

@@ -1,28 +1,36 @@
 version: "3"
 
 tasks:
-  run:
-    desc: "Запустить приложение"
+  run:gym-app:
+    desc: "Запустить gym-app в локальном режиме"
+    dir: ./gym_app/app
     cmds:
-      - go run ./cmd/gym-app
+      - CONFIG_PATH=../config/local.yaml go run ./cmd/gym-app/main.go
+
+  run:sso-app:
+    desc: "Запустить sso-app в локальном режиме"
+    dir: ./sso/app
+    cmds:
+      - CONFIG_PATH=../config/local.yaml go run ./cmd/sso/main.go
 
   migrations-up:
     desc: Run migrations
     cmds:
-      - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/gym_db --command=up
+      - migrate -path=./migrations/gym -database "postgres://postgres:postgres@localhost:5432/gym_db?sslmode=disable" up
+
   migrations-down:
     desc: Rollback migrations
     cmds:
-      - go run ./cmd/migrator --migrations-path=./migrations --storage-path=postgres:postgres@localhost:5432/gym_db --command=down
+      - go run ./gym_app/app/cmd/migrator --migrations-path=./migrations/gym --storage-path=postgres:postgres@localhost:5432/gym_db --command=down
 
   redis:start:
-    desc: "Start Redis with config/config/redis.conf"
+    desc: "Start Redis with gym_app/config/redis.conf"
     cmds:
-      - mkdir -p internal/storage/redis/data
-      - redis-server config/redis.conf
+      - mkdir -p gym_app/app/internal/storage/redis/data
+      - redis-server gym_app/config/redis.conf
     silent: false
 
   proto-gen:
     desc: "Generate proto files"
     cmds:
-      - protoc --proto_path=./api --go_out=../../pkg --go-grpc_out=../../pkg --validate_out=lang=go:../../pkg api/sso/sso.proto
+      - protoc --proto_path=./proto --go_out=./sso/app/pkg --go-grpc_out=./sso/app/pkg --validate_out=lang=go:./sso/app/pkg ./proto/sso/sso.proto

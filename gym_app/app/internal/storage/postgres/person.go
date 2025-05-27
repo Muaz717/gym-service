@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Muaz717/gym_app/app/internal/models"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/storage"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -76,24 +76,31 @@ func (s *Storage) DeletePerson(ctx context.Context, pID int) error {
 	return nil
 }
 
-func (s *Storage) FindPersonByName(ctx context.Context, name string) (models.Person, error) {
-	const op = "postgres.findPersonByName"
+func (s *Storage) FindPersonByName(ctx context.Context, name string) ([]models.Person, error) {
+	const op = "storage.FindPersonByName"
 
-	query := `SELECT * FROM person WHERE full_name = $1`
-	var person models.Person
-	err := s.db.QueryRow(ctx, query, name).Scan(
-		&person.Id,
-		&person.Name,
-		&person.Phone,
-	)
+	// Поиск по подстроке, регистронезависимо
+	query := `SELECT id, full_name, phone FROM person WHERE full_name ILIKE '%' || $1 || '%' ORDER BY full_name LIMIT 20`
+	rows, err := s.db.Query(ctx, query, name)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Person{}, fmt.Errorf("%s: %w", op, storage.ErrPersonNotFound)
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	var people []models.Person
+	for rows.Next() {
+		var person models.Person
+		if err := rows.Scan(&person.Id, &person.Name, &person.Phone); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		return models.Person{}, fmt.Errorf("%s: %w", op, err)
+		people = append(people, person)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return person, nil
+	// Если не найдено — возвращаем пустой слайс, а НЕ ошибку
+	return people, nil
 }
 
 func (s *Storage) FindAllPeople(ctx context.Context) ([]models.Person, error) {
@@ -112,7 +119,7 @@ func (s *Storage) FindAllPeople(ctx context.Context) ([]models.Person, error) {
 	return pgx.CollectRows(rows, pgx.RowToStructByName[models.Person])
 }
 
-func (s *Storage) FindPersonById(ctx context.Context, id int64) (models.Person, error) {
+func (s *Storage) FindPersonById(ctx context.Context, id int) (models.Person, error) {
 	const op = "postgres.findPersonById"
 
 	query := `SELECT * FROM person WHERE id = $1`

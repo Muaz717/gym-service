@@ -7,6 +7,7 @@ import (
 	"github.com/Muaz717/gym_app/app/internal/cron"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	personService "github.com/Muaz717/gym_app/app/internal/services/person"
+	statService "github.com/Muaz717/gym_app/app/internal/services/statistics"
 	subscriptionService "github.com/Muaz717/gym_app/app/internal/services/subscription"
 	"github.com/Muaz717/gym_app/app/internal/storage/postgres"
 	"github.com/Muaz717/gym_app/app/internal/storage/redis"
@@ -51,14 +52,15 @@ func New(
 		panic(err)
 	}
 
-	personSrv := personService.New(log, storage, cache)
+	personSrv := personService.New(log, storage, cache, cache)
 	subscriptionSrv := subscriptionService.New(log, storage)
-	personSubSrv := personSubService.New(log, storage, cache, storage)
+	personSubSrv := personSubService.New(log, storage, cache, storage, cache)
 	authSrv := authService.New(log, ssoClient, cfg.AppID)
+	statSrv := statService.New(log, storage, cache)
 
 	cr := cron.New(personSubSrv)
 
-	httpApplication := httpApp.New(ctx, log, *cfg, ssoClient, authSrv, personSrv, subscriptionSrv, personSubSrv)
+	httpApplication := httpApp.New(ctx, log, *cfg, ssoClient, authSrv, personSrv, subscriptionSrv, personSubSrv, statSrv)
 
 	return &App{
 		HTTPSrv: httpApplication,

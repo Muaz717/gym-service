@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
-	"github.com/Muaz717/gym_app/app/internal/models"
 	"github.com/Muaz717/gym_app/app/internal/services/cache"
 	"github.com/Muaz717/gym_app/app/internal/storage"
-
 	"log/slog"
 	"time"
 )
@@ -22,19 +22,25 @@ const (
 
 type PersonSubStorage interface {
 	AddPersonSub(ctx context.Context, personSub models.PersonSubscription) (string, error)
-	GetPersonSubByNumber(ctx context.Context, number string) (models.PersonSubscription, error)
-	GetAllPersonSubs(ctx context.Context) ([]models.PersonSubscription, error)
+	GetPersonSubByNumber(ctx context.Context, number string) (dto.PersonSubResponse, error)
+	GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse, error)
 	DeletePersonSub(ctx context.Context, number string) error
-	FindPersonSubByPersonName(ctx context.Context, name string) ([]models.PersonSubscription, error)
+	FindPersonSubByPersonName(ctx context.Context, name string) ([]dto.PersonSubResponse, error)
 	UpdatePersonSubStatus(ctx context.Context, number string, status string) error
+	FindPersonSubByPersonId(ctx context.Context, personID int) ([]dto.PersonSubResponse, error)
 }
 
 type PersonFinder interface {
-	FindPersonById(ctx context.Context, id int64) (models.Person, error)
+	FindPersonById(ctx context.Context, id int) (models.Person, error)
 }
 
 type PersonSubCache interface {
 	cache.Cache
+}
+
+type StatCache interface {
+	cache.Cache
+	DelByPrefix(ctx context.Context, prefix string) error
 }
 
 type PersonSubService struct {
@@ -42,18 +48,22 @@ type PersonSubService struct {
 	personSubStorage PersonSubStorage
 	personSubCache   PersonSubCache
 	personFinder     PersonFinder
+	statCache        StatCache
 }
 
-func New(log *slog.Logger,
+func New(
+	log *slog.Logger,
 	personSubStorage PersonSubStorage,
 	personSubCache PersonSubCache,
 	personFinder PersonFinder,
+	statCache StatCache,
 ) *PersonSubService {
 	return &PersonSubService{
 		log:              log,
 		personSubStorage: personSubStorage,
-		personFinder:     personFinder,
 		personSubCache:   personSubCache,
+		personFinder:     personFinder,
+		statCache:        statCache,
 	}
 }
 
@@ -63,7 +73,20 @@ var (
 	ErrPersonNotFound = errors.New("person not found")
 )
 
-func (p *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDate models.PersonSubStrDate) (string, error) {
+// Инвалидация статистического кэша с поддержкой DelByPrefix для Redis
+func (p *PersonSubService) invalidateStatisticsCache(ctx context.Context) {
+	_ = p.statCache.DelByPrefix(ctx, "stat:income:")
+	_ = p.statCache.DelByPrefix(ctx, "stat:sold_subs:")
+	_ = p.statCache.DelByPrefix(ctx, "stat:new_clients:")
+	_ = p.statCache.Delete(ctx, "stat:income")
+	_ = p.statCache.Delete(ctx, "stat:total_clients")
+	_ = p.statCache.Delete(ctx, "stat:sold_subs")
+	_ = p.statCache.Delete(ctx, "stat:new_clients")
+	_ = p.statCache.Delete(ctx, "stat:total_sold_subscriptions")
+	_ = p.statCache.Delete(ctx, "stat:total_income")
+}
+
+func (p *PersonSubService) AddPersonSub(ctx context.Context, personSub models.PersonSubscription) (string, error) {
 	const op = "services.personSub.AddPersonSub"
 
 	log := p.log.With(
@@ -71,8 +94,6 @@ func (p *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDate mo
 	)
 
 	log.Info("Adding new person subscription")
-
-	personSub := convertToPersonSub(personSubStrDate)
 
 	personSubNumber, err := p.personSubStorage.AddPersonSub(ctx, personSub)
 	if err != nil {
@@ -92,21 +113,24 @@ func (p *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDate mo
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Инвалидируем кэш
+	// Инвалидируем кэш подписок
 	if err := p.personSubCache.Delete(ctx, "person_subs:all"); err != nil {
 		log.Warn("failed to invalidate cache", sl.Error(err))
 	}
 
-	// Получаем имя пользователя по PersonID для инвалидации кэша
+	// Инвалидируем кэш по имени пользователя
 	person, err := p.personFinder.FindPersonById(ctx, personSub.PersonID)
 	if err != nil {
-		log.Warn("failed to get person name for cache invalidation", slog.Int64("personID", personSub.PersonID), sl.Error(err))
+		log.Warn("failed to get person name for cache invalidation", slog.Int("personID", personSub.PersonID), sl.Error(err))
 	} else {
 		cacheKey := fmt.Sprintf("person_sub:person:%s", person.Name)
 		if err := p.personSubCache.Delete(ctx, cacheKey); err != nil {
 			log.Warn("failed to invalidate cache", sl.Error(err))
 		}
 	}
+
+	// Инвалидируем статистику!
+	p.invalidateStatisticsCache(ctx)
 
 	log.Info("person subscription added", "number", personSubNumber)
 
@@ -143,7 +167,7 @@ func (p *PersonSubService) DeletePersonSub(ctx context.Context, number string) e
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Инвалидируем кэш
+	// Инвалидируем кэш подписок
 	cacheKey := fmt.Sprintf("person_sub:number:%s", number)
 	if err := p.personSubCache.Delete(ctx, cacheKey); err != nil {
 		log.Warn("failed to invalidate cache", sl.Error(err))
@@ -151,10 +175,11 @@ func (p *PersonSubService) DeletePersonSub(ctx context.Context, number string) e
 	if err := p.personSubCache.Delete(ctx, "person_subs:all"); err != nil {
 		log.Warn("failed to invalidate cache", sl.Error(err))
 	}
+	// Инвалидируем кэш по имени пользователя, если PersonID существует
 	if personSub.PersonID != 0 {
 		person, err := p.personFinder.FindPersonById(ctx, personSub.PersonID)
 		if err != nil {
-			log.Warn("failed to get person name for cache invalidation", slog.Int64("personID", personSub.PersonID), sl.Error(err))
+			log.Warn("failed to get person name for cache invalidation", slog.Int("personID", personSub.PersonID), sl.Error(err))
 		} else {
 			personCacheKey := fmt.Sprintf("person_sub:person:%s", person.Name)
 			if err := p.personSubCache.Delete(ctx, personCacheKey); err != nil {
@@ -163,12 +188,15 @@ func (p *PersonSubService) DeletePersonSub(ctx context.Context, number string) e
 		}
 	}
 
+	// Инвалидируем статистику!
+	p.invalidateStatisticsCache(ctx)
+
 	log.Info("person subscription deleted", "number", number)
 
 	return nil
 }
 
-func (p *PersonSubService) GetPersonSubByNumber(ctx context.Context, number string) (models.PersonSubStrDate, error) {
+func (p *PersonSubService) GetPersonSubByNumber(ctx context.Context, number string) (dto.PersonSubResponse, error) {
 	const op = "services.personSub.FindPersonSubByNumber"
 
 	log := p.log.With(
@@ -180,17 +208,17 @@ func (p *PersonSubService) GetPersonSubByNumber(ctx context.Context, number stri
 	// Проверяем кэш
 	cacheKey := fmt.Sprintf("person_sub:number:%s", number)
 	if cached, err := p.personSubCache.Get(ctx, cacheKey); err == nil {
-		var personSub models.PersonSubscription
+		var personSub dto.PersonSubResponse
 		if err := json.Unmarshal([]byte(cached), &personSub); err == nil {
 			log.Info("cache hit", slog.String("key", cacheKey))
-			return convertToPersonSubStrDate(personSub), nil
+			return personSub, nil
 		}
 		log.Warn("failed to unmarshal cached data", sl.Error(err))
 	}
 
 	personSub, err := p.personSubStorage.GetPersonSubByNumber(ctx, number)
 	if err != nil {
-		return models.PersonSubStrDate{}, err
+		return dto.PersonSubResponse{}, err
 	}
 
 	// Сохраняем в кэш
@@ -202,12 +230,10 @@ func (p *PersonSubService) GetPersonSubByNumber(ctx context.Context, number stri
 
 	log.Info("person subscription found", "number", number)
 
-	personSubStrDate := convertToPersonSubStrDate(personSub)
-
-	return personSubStrDate, nil
+	return personSub, nil
 }
 
-func (p *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]models.PersonSubStrDate, error) {
+func (p *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse, error) {
 	const op = "services.personSub.GetAllPersonSubs"
 
 	log := p.log.With(
@@ -219,14 +245,10 @@ func (p *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]models.Perso
 	// Проверяем кэш
 	cacheKey := "person_subs:all"
 	if cached, err := p.personSubCache.Get(ctx, cacheKey); err == nil {
-		var personSubs []models.PersonSubscription
+		var personSubs []dto.PersonSubResponse
 		if err := json.Unmarshal([]byte(cached), &personSubs); err == nil {
 			log.Info("cache hit", slog.String("key", cacheKey))
-			var personSubsStrDate []models.PersonSubStrDate
-			for _, personSub := range personSubs {
-				personSubsStrDate = append(personSubsStrDate, convertToPersonSubStrDate(personSub))
-			}
-			return personSubsStrDate, nil
+			return personSubs, nil
 		}
 		log.Warn("failed to unmarshal cached data", sl.Error(err))
 	}
@@ -245,15 +267,10 @@ func (p *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]models.Perso
 
 	log.Info("all person subscriptions found")
 
-	var personSubsStrDate []models.PersonSubStrDate
-	for _, personSub := range personSubs {
-		personSubsStrDate = append(personSubsStrDate, convertToPersonSubStrDate(personSub))
-	}
-
-	return personSubsStrDate, nil
+	return personSubs, nil
 }
 
-func (p *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name string) ([]models.PersonSubStrDate, error) {
+func (p *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name string) ([]dto.PersonSubResponse, error) {
 	const op = "services.personSub.FindPersonSubByPersonName"
 
 	log := p.log.With(
@@ -265,20 +282,25 @@ func (p *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name s
 	// Проверяем кэш
 	cacheKey := fmt.Sprintf("person_sub:person:%s", name)
 	if cached, err := p.personSubCache.Get(ctx, cacheKey); err == nil {
-		var personSubs []models.PersonSubscription
+		var personSubs []dto.PersonSubResponse
 		if err := json.Unmarshal([]byte(cached), &personSubs); err == nil {
 			log.Info("cache hit", slog.String("key", cacheKey))
-			var personSubsStrDate []models.PersonSubStrDate
-			for _, personSub := range personSubs {
-				personSubsStrDate = append(personSubsStrDate, convertToPersonSubStrDate(personSub))
-			}
-			return personSubsStrDate, nil
+			return personSubs, nil
 		}
 		log.Warn("failed to unmarshal cached data", sl.Error(err))
 	}
 
 	personSubs, err := p.personSubStorage.FindPersonSubByPersonName(ctx, name)
 	if err != nil {
+		if errors.Is(err, storage.ErrPersonNotFound) {
+			log.Warn("person not found", slog.String("name", name), sl.Error(err))
+			return nil, ErrPersonNotFound
+		}
+
+		if errors.Is(err, storage.ErrSubscriptionNotFound) {
+			log.Warn("no subscriptions found for person", slog.String("name", name), sl.Error(err))
+			return nil, ErrSubNotFound
+		}
 
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -290,13 +312,55 @@ func (p *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name s
 		}
 	}
 
-	var personSubsStrDate []models.PersonSubStrDate
-	for _, personSub := range personSubs {
-		personSubsStrDate = append(personSubsStrDate, convertToPersonSubStrDate(personSub))
+	log.Info("person subscriptions found")
+	return personSubs, nil
+}
+
+func (p *PersonSubService) FindPersonSubByPersonId(ctx context.Context, personID int) ([]dto.PersonSubResponse, error) {
+	const op = "services.personSub.FindPersonSubByPersonId"
+
+	log := p.log.With(
+		slog.String("op", op),
+	)
+	log.Info("Finding person subscription by person ID", slog.Int("personID", personID))
+
+	// Проверяем кэш
+	cacheKey := fmt.Sprintf("person_sub:person:%d", personID)
+	if cached, err := p.personSubCache.Get(ctx, cacheKey); err == nil {
+		var personSubs []dto.PersonSubResponse
+		if err := json.Unmarshal([]byte(cached), &personSubs); err == nil {
+			log.Info("cache hit", slog.String("key", cacheKey))
+			return personSubs, nil
+		}
+		log.Warn("failed to unmarshal cached data", sl.Error(err))
 	}
 
-	log.Info("person subscriptions found")
-	return personSubsStrDate, nil
+	// Получаем подписки по PersonID
+	personSubs, err := p.personSubStorage.FindPersonSubByPersonId(ctx, personID)
+	if err != nil {
+		if errors.Is(err, storage.ErrPersonNotFound) {
+			log.Warn("person not found", slog.Int("personID", personID), sl.Error(err))
+			return nil, ErrPersonNotFound
+		}
+		if errors.Is(err, storage.ErrSubscriptionNotFound) {
+			log.Warn("no subscriptions found for person", slog.Int("personID", personID), sl.Error(err))
+			return nil, ErrSubNotFound
+		}
+		log.Error("failed to find person subscription by person ID", sl.Error(err))
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	// Сохраняем в кэш
+	if data, err := json.Marshal(personSubs); err == nil {
+		if err := p.personSubCache.Set(ctx, cacheKey, data, 10*time.Minute); err != nil {
+			log.Warn("failed to set cache", sl.Error(err))
+		}
+	} else {
+		log.Warn("failed to marshal person subscriptions for cache", sl.Error(err))
+	}
+
+	log.Info("person subscriptions found by person ID", slog.Int("personID", personID))
+	return personSubs, nil
 }
 
 func (p *PersonSubService) UpdateStatuses(ctx context.Context) error {
@@ -343,7 +407,7 @@ func (p *PersonSubService) UpdateStatuses(ctx context.Context) error {
 			// Инвалидируем кэш для пользователя
 			person, err := p.personFinder.FindPersonById(ctx, sub.PersonID)
 			if err != nil {
-				log.Warn("failed to get person name for cache invalidation", slog.Int64("personID", sub.PersonID), sl.Error(err))
+				log.Warn("failed to get person name for cache invalidation", slog.Int("personID", sub.PersonID), sl.Error(err))
 			} else {
 				personCacheKey := fmt.Sprintf("person_sub:person:%s", person.Name)
 				if err := p.personSubCache.Delete(ctx, personCacheKey); err != nil {
@@ -358,50 +422,9 @@ func (p *PersonSubService) UpdateStatuses(ctx context.Context) error {
 		log.Warn("failed to invalidate cache", sl.Error(err))
 	}
 
+	// И статистику!
+	p.invalidateStatisticsCache(ctx)
+
 	log.Info("person subscription statuses updated")
 	return nil
-}
-
-func convertToPersonSubStrDate(personSub models.PersonSubscription) models.PersonSubStrDate {
-	return models.PersonSubStrDate{
-		PersonID:       personSub.PersonID,
-		SubscriptionID: personSub.SubscriptionID,
-		Number:         personSub.Number,
-		StartDate:      personSub.StartDate.Format("02-01-2006"),
-		EndDate:        personSub.EndDate.Format("02-01-2006"),
-		Status:         personSub.Status,
-	}
-}
-
-func convertToPersonSub(personSubStrDate models.PersonSubStrDate) models.PersonSubscription {
-	startDate, _ := time.Parse("02-01-2006", personSubStrDate.StartDate)
-	endDate, _ := time.Parse("02-01-2006", personSubStrDate.EndDate)
-
-	if startDate.IsZero() {
-		startDate = time.Now()
-	}
-	if endDate.IsZero() {
-		endDate = startDate.AddDate(0, 0, 30) // Default to one month subscription
-	}
-
-	if personSubStrDate.Status == "" {
-
-		today := time.Now().Truncate(24 * time.Hour)
-		start := startDate.Truncate(24 * time.Hour)
-
-		if !today.Equal(start) {
-			personSubStrDate.Status = frozenStatus
-		} else {
-			personSubStrDate.Status = activeStatus
-		}
-	}
-
-	return models.PersonSubscription{
-		PersonID:       personSubStrDate.PersonID,
-		SubscriptionID: personSubStrDate.SubscriptionID,
-		Number:         personSubStrDate.Number,
-		StartDate:      startDate,
-		EndDate:        endDate,
-		Status:         personSubStrDate.Status,
-	}
 }

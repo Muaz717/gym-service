@@ -4,13 +4,14 @@ services:
   frontend:
     image: gym-frontend
     ports:
-      - "5173:5173"
+      - "80:80"
     environment:
-      - VITE_API_URL=http://localhost:8082/api/v1
+      - VITE_API_URL=http://gym-app:8082/api/v1
     depends_on:
       - gym-app
     networks:
-        - gym
+      - gym
+    restart: unless-stopped
 
   gym-app:
     image: gym-app:local

@@ -53,7 +53,7 @@ type ClientConfig struct {
 
 func MustLoad() *Config {
 
-	//if err := godotenv.Load("../.env"); err != nil {
+	//if err := godotenv.Load("../../.env"); err != nil {
 	//	log.Fatalf("failed to load .env file: %s", err.Error())
 	//}
 

@@ -4,7 +4,6 @@ import (
 	"github.com/Muaz717/sso/app/internal/app"
 	"github.com/Muaz717/sso/app/internal/config"
 	"github.com/Muaz717/sso/app/internal/lib/logger/handlers/slogpretty"
-	"github.com/joho/godotenv"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -20,9 +19,9 @@ const (
 
 func main() {
 
-	if err := godotenv.Load("../../.env"); err != nil {
-		panic("failed to load .env file: " + err.Error())
-	}
+	//if err := godotenv.Load("../../.env"); err != nil {
+	//	panic("failed to load .env file: " + err.Error())
+	//}
 
 	cfg := config.MustLoad()
 

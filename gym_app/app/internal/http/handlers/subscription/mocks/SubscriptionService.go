@@ -6,7 +6,8 @@ package mocks
 
 import (
 	"context"
-	"github.com/Muaz717/github.com/Muaz717/gym_app/app/internal/models"
+
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	mock "github.com/stretchr/testify/mock"
 )
 

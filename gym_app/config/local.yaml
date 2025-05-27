@@ -15,6 +15,7 @@ db:
   port: "5432"
   username: postgres
   dbname: gym_db
+  dbpassword: postgres # Пароль к БД, по умолчанию postgres
   # Пароль подставляется через env-переменную DB_PASSWORD
 
 # Clients config

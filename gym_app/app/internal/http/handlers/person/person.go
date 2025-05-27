@@ -3,9 +3,9 @@ package personHandler
 import (
 	"context"
 	"errors"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/lib/api/response"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
-	"github.com/Muaz717/gym_app/app/internal/models"
 	personService "github.com/Muaz717/gym_app/app/internal/services/person"
 	"github.com/gin-gonic/gin"
 
@@ -20,7 +20,8 @@ type PersonService interface {
 	FindAllPeople(ctx context.Context) ([]models.Person, error)
 	UpdatePerson(ctx context.Context, person models.Person, pID int) (int, error)
 	DeletePerson(ctx context.Context, pID int) error
-	FindPersonByName(ctx context.Context, name string) (models.Person, error)
+	FindPersonByName(ctx context.Context, name string) ([]models.Person, error)
+	FindPersonById(ctx context.Context, id int) (models.Person, error)
 }
 
 type PersonHandler struct {
@@ -242,34 +243,25 @@ func (h *PersonHandler) DeletePerson(c *gin.Context) {
 // @Failure 500 {object} response.Response "Internal server error"
 // @Router /people/find [get]
 func (h *PersonHandler) FindPersonByName(c *gin.Context) {
-	const op = "handlers.person.findPersonByName"
-
-	log := h.log.With(
-		slog.String("op", op),
-	)
+	const op = "handlers.PersonHandler.FindPersonByName"
+	log := h.log.With(slog.String("op", op))
 
 	name := c.Query("name")
 	if name == "" {
 		log.Error("name parameter is missing")
-
 		c.JSON(http.StatusBadRequest, response.Error("name parameter is required"))
 		return
 	}
 
-	person, err := h.personService.FindPersonByName(h.ctx, name)
+	people, err := h.personService.FindPersonByName(c.Request.Context(), name)
 	if err != nil {
-		if errors.Is(err, personService.ErrPersonNotFound) {
-			c.JSON(http.StatusNotFound, response.Error("person not found"))
-			return
-		}
-
-		log.Error("failed to find person", sl.Error(err))
-		c.JSON(http.StatusInternalServerError, response.Error("failed to find person"))
+		log.Error("failed to find people", sl.Error(err))
+		c.JSON(http.StatusInternalServerError, response.Error("failed to find people"))
 		return
 	}
 
-	log.Info("Person found", slog.String("name", name))
-	c.JSON(http.StatusOK, person)
+	// Всегда массив!
+	c.JSON(http.StatusOK, people)
 }
 
 // FindAllPeople godoc
@@ -300,4 +292,49 @@ func (h *PersonHandler) FindAllPeople(c *gin.Context) {
 	log.Info("People found")
 
 	c.JSON(http.StatusOK, people)
+}
+
+// FindPersonById godoc
+// @Summary Find a person by ID
+// @Description Find a person by ID
+// @Security BearerAuth
+// @Tags person
+// @Accept json
+// @Produce json
+// @Param id path int true "Person ID"
+// @Success 200 {object} models.Person "Person found"
+// @Failure 400 {object} response.Response "Bad request"
+// @Failure 404 {object} response.Response "Not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /people/find/{id} [get]
+func (h *PersonHandler) FindPersonById(c *gin.Context) {
+	const op = "handlers.person.findPersonById"
+	log := h.log.With(slog.String("op", op))
+
+	pIDStr := c.Param("id")
+	if pIDStr == "" {
+		log.Error("person id parameter is missing")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "person id parameter is required"})
+		return
+	}
+	pID, err := strconv.Atoi(pIDStr)
+	if err != nil {
+		log.Error("failed to parse person id", sl.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid person id"})
+		return
+	}
+
+	person, err := h.personService.FindPersonById(h.ctx, pID)
+	if err != nil {
+		if errors.Is(err, personService.ErrPersonNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "person not found"})
+			return
+		}
+		log.Error("failed to find person", sl.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to find person"})
+		return
+	}
+
+	log.Info("Person found", slog.Int("person_id", pID))
+	c.JSON(http.StatusOK, gin.H{"data": person})
 }

@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -35,6 +36,61 @@ type AuthService_Expecter struct {
 
 func (_m *AuthService) EXPECT() *AuthService_Expecter {
 	return &AuthService_Expecter{mock: &_m.Mock}
+}
+
+// CheckToken provides a mock function for the type AuthService
+func (_mock *AuthService) CheckToken(ctx context.Context, token string) (models.User, error) {
+	ret := _mock.Called(ctx, token)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckToken")
+	}
+
+	var r0 models.User
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.User, error)); ok {
+		return returnFunc(ctx, token)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.User); ok {
+		r0 = returnFunc(ctx, token)
+	} else {
+		r0 = ret.Get(0).(models.User)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, token)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AuthService_CheckToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckToken'
+type AuthService_CheckToken_Call struct {
+	*mock.Call
+}
+
+// CheckToken is a helper method to define mock.On call
+//   - ctx
+//   - token
+func (_e *AuthService_Expecter) CheckToken(ctx interface{}, token interface{}) *AuthService_CheckToken_Call {
+	return &AuthService_CheckToken_Call{Call: _e.mock.On("CheckToken", ctx, token)}
+}
+
+func (_c *AuthService_CheckToken_Call) Run(run func(ctx context.Context, token string)) *AuthService_CheckToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *AuthService_CheckToken_Call) Return(user models.User, err error) *AuthService_CheckToken_Call {
+	_c.Call.Return(user, err)
+	return _c
+}
+
+func (_c *AuthService_CheckToken_Call) RunAndReturn(run func(ctx context.Context, token string) (models.User, error)) *AuthService_CheckToken_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Login provides a mock function for the type AuthService

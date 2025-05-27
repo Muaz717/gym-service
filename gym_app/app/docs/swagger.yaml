@@ -1,5 +1,24 @@
 basePath: /api/v1
 definitions:
+  dto.PersonSubResponse:
+    properties:
+      end_date:
+        type: string
+      number:
+        type: string
+      person_id:
+        type: integer
+      person_name:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      subscription_id:
+        type: integer
+      subscription_title:
+        type: string
+    type: object
   models.LoginRequest:
     properties:
       email:
@@ -21,10 +40,9 @@ definitions:
     - name
     - phone
     type: object
-  models.PersonSubStrDate:
+  models.PersonSubscription:
     properties:
       end_date:
-        description: Дата окончания
         type: string
       number:
         description: Номер абонемента
@@ -33,10 +51,8 @@ definitions:
         description: ID клиента
         type: integer
       start_date:
-        description: Дата начала
         type: string
       status:
-        description: Статус абонемента (active/frozen/completed)
         type: string
       subscription_id:
         description: ID абонемента
@@ -45,21 +61,6 @@ definitions:
     - number
     - person_id
     - subscription_id
-    type: object
-  models.PersonSubscription:
-    properties:
-      end_date:
-        type: string
-      number:
-        type: string
-      person_id:
-        type: integer
-      start_date:
-        type: string
-      status:
-        type: string
-      subscription_id:
-        type: integer
     type: object
   models.RegisterRequest:
     properties:
@@ -85,6 +86,17 @@ definitions:
       title:
         description: Название тарифа
         type: string
+    type: object
+  models.User:
+    properties:
+      email:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: integer
     type: object
   response.Response:
     properties:
@@ -139,6 +151,25 @@ paths:
       security:
       - BearerAuth: []
       summary: Login
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Returns info about the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current user info
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user info
       tags:
       - auth
   /auth/register:
@@ -306,6 +337,41 @@ paths:
       summary: Find a person by name
       tags:
       - person
+  /people/find/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Find a person by ID
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Person found
+          schema:
+            $ref: '#/definitions/models.Person'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Find a person by ID
+      tags:
+      - person
   /people/update/{id}:
     put:
       consumes:
@@ -359,7 +425,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.PersonSubStrDate'
+              $ref: '#/definitions/dto.PersonSubResponse'
             type: array
         "500":
           description: Внутренняя ошибка сервера
@@ -381,7 +447,7 @@ paths:
         name: person_sub
         required: true
         schema:
-          $ref: '#/definitions/models.PersonSubStrDate'
+          $ref: '#/definitions/models.PersonSubscription'
       produces:
       - application/json
       responses:
@@ -441,17 +507,17 @@ paths:
       summary: Удалить абонемент
       tags:
       - person_sub
-  /person_sub/find:
+  /person_sub/find/{id}:
     get:
       consumes:
       - application/json
-      description: Возвращает список абонементов клиента по имени
+      description: Возвращает список абонементов клиента по ID
       parameters:
-      - description: Имя клиента
-        in: query
-        name: name
+      - description: ID клиента
+        in: path
+        name: id
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -459,14 +525,14 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.PersonSubStrDate'
+              $ref: '#/definitions/dto.PersonSubResponse'
             type: array
         "400":
           description: Ошибка валидации
           schema:
             $ref: '#/definitions/response.Response'
         "404":
-          description: Абонемент не найден
+          description: Клиент не найден
           schema:
             $ref: '#/definitions/response.Response'
         "500":
@@ -475,7 +541,7 @@ paths:
             $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
-      summary: Получить абонементы по имени
+      summary: Получить абонементы по ID клиента
       tags:
       - person_sub
   /person_sub/find/{number}:
@@ -496,7 +562,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/models.PersonSubscription'
+              $ref: '#/definitions/dto.PersonSubResponse'
             type: array
         "400":
           description: Ошибка валидации
@@ -505,6 +571,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Получить абонементы по номеру
+      tags:
+      - person_sub
+  /person_sub/find_by_name:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список абонементов клиента по имени
+      parameters:
+      - description: Имя клиента
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PersonSubResponse'
+            type: array
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Клиент не найден
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: Получить абонементы по имени
       tags:
       - person_sub
   /subscription:

@@ -9,6 +9,7 @@ import (
 	authHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/auth"
 	personHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person"
 	personSubHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person_sub"
+	statHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/statistics"
 	subscriptionHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/subscription"
 	authMiddleware "github.com/Muaz717/gym_app/app/internal/http/middleware/auth"
 	loggerMiddleware "github.com/Muaz717/gym_app/app/internal/http/middleware/logger"
@@ -47,23 +48,17 @@ func New(
 	personService personHandler.PersonService,
 	subscriptionService subscriptionHandler.SubscriptionService,
 	personSubService personSubHandler.PersonSubService,
+	statService statHandler.StatService,
 ) *HttpApp {
 
 	personHandle := personHandler.New(ctx, log, personService)
 	subscriptionHandle := subscriptionHandler.New(ctx, log, subscriptionService)
 	personSubHandle := personSubHandler.New(ctx, log, personSubService)
 	authHandle := authHandler.New(ctx, log, authService)
+	statHandle := statHandler.New(ctx, log, statService)
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-
-	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, // Add your frontend URL
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
 
 	setupMiddleware(engine, log, cfg)
 
@@ -78,6 +73,7 @@ func New(
 	{
 		auth.POST("/register", authHandle.RegisterNewUser)
 		auth.POST("/login", authHandle.Login)
+		auth.GET("/me", authHandle.Me)
 	}
 
 	api.Use(userMiddleware)
@@ -86,13 +82,13 @@ func New(
 		{
 			people.GET("", personHandle.FindAllPeople)
 			people.GET("/find", personHandle.FindPersonByName)
+			people.GET("/find/:id", personHandle.FindPersonById)
 
 			adminPeople := people.Group("")
 			adminPeople.Use(adminMiddleware)
 			adminPeople.POST("/add", personHandle.AddPerson)
 			adminPeople.PUT("update/:id", personHandle.UpdatePerson)
 			adminPeople.DELETE("delete/:id", personHandle.DeletePerson)
-
 		}
 
 		subscription := api.Group("/subscription")
@@ -108,16 +104,28 @@ func New(
 
 		personSub := api.Group("/person_sub")
 		{
-
 			personSub.GET("find/:number", personSubHandle.FindPersonSubByNumber)
 			personSub.GET("", personSubHandle.FindAllPersonSubs)
 			personSub.GET("/find", personSubHandle.FindPersonSubByPersonName)
+			personSub.GET("/find/id/:id", personSubHandle.FindPersonSubByPersonId)
 
 			adminPersonSub := personSub.Group("")
 			adminPersonSub.Use(adminMiddleware)
 			adminPersonSub.POST("/add", personSubHandle.AddPersonSub)
 			adminPersonSub.DELETE("delete/:number", personSubHandle.DeletePersonSub)
 		}
+
+		// --- STATISTICS ROUTES ---
+		statistics := api.Group("/statistics")
+		{
+			statistics.GET("/total_clients", statHandle.TotalClients)
+			statistics.GET("/new_clients", statHandle.NewClients)
+			statistics.GET("/total_income", statHandle.TotalIncome)
+			statistics.GET("/income", statHandle.Income)
+			statistics.GET("/total_sold_subscriptions", statHandle.TotalSoldSubscriptions)
+			statistics.GET("/sold_subscriptions", statHandle.SoldSubscriptions)
+		}
+		// --- END STATISTICS ROUTES ---
 	}
 
 	srv := &http.Server{
@@ -173,13 +181,19 @@ func (a *HttpApp) Stop() error {
 }
 
 func setupMiddleware(engine *gin.Engine, log *slog.Logger, cfg config.Config) {
-	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Или cfg.AllowedOrigins
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
+	corsConfig := cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"http://localhost:80",
+			"http://localhost",
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Cache-Control", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
-	}))
+		MaxAge:           12 * time.Hour,
+	}
+	engine.Use(cors.New(corsConfig))
 
 	engine.Use(gin.Recovery())
 	engine.Use(loggerMiddleware.New(log))

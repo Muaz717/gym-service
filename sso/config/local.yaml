@@ -6,6 +6,7 @@ db:
   port: "5432"
   username: "postgres"
   dbname: "sso_db"
+  dbpassword: "postgres" # Пароль к БД, по умолчанию postgres
 
 grpc:
   host: "0.0.0.0"       # слушать внутри контейнера на всех интерфейсах

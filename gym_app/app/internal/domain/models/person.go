@@ -8,7 +8,6 @@ type Person struct {
 	Id    int    `json:"id,omitempty"`
 	Name  string `json:"name,omitempty" db:"full_name" validate:"required,min=2,max=50"`
 	Phone string `json:"phone,omitempty" validate:"required,len=11,number"`
-	//Memberships []Subscription `json:"memberships,omitempty" required:"false"`
 }
 
 func (p *Person) Validate() map[string]string {

@@ -7,24 +7,18 @@ import (
 
 // PersonSubscription представляет подписку клиента на абонемент
 type PersonSubscription struct {
-	Number         string    `json:"number"`
-	PersonID       int64     `json:"person_id"`
-	SubscriptionID int64     `json:"subscription_id"`
-	StartDate      time.Time `json:"start_date,omitempty"`
-	EndDate        time.Time `json:"end_date,omitempty"`
-	Status         string    `json:"status,omitempty"`
+	Number            string    `json:"number" validate:"required"`          // Номер абонемента
+	PersonID          int       `json:"person_id" validate:"required"`       // ID клиента
+	SubscriptionID    int       `json:"subscription_id" validate:"required"` // ID абонемента
+	SubscriptionPrice float64   `json:"subscription_price,omitempty"`
+	StartDate         time.Time `json:"start_date,omitempty"`
+	EndDate           time.Time `json:"end_date,omitempty"`
+	Status            string    `json:"status,omitempty"`
+	Discount          float64   `json:"discount,omitempty"` // Скидка в рублях
+	FinalPrice        float64   `json:"final_price,omitempty"`
 }
 
-type PersonSubStrDate struct {
-	Number         string `json:"number" validate:"required"`          // Номер абонемента
-	PersonID       int64  `json:"person_id" validate:"required"`       // ID клиента
-	SubscriptionID int64  `json:"subscription_id" validate:"required"` // ID абонемента
-	StartDate      string `json:"start_date,omitempty"`                // Дата начала
-	EndDate        string `json:"end_date,omitempty"`                  // Дата окончания
-	Status         string `json:"status,omitempty"`                    // Статус абонемента (active/frozen/completed)
-}
-
-func (p *PersonSubStrDate) Validate() map[string]string {
+func (p *PersonSubscription) Validate() map[string]string {
 	validate := validator.New()
 	err := validate.Struct(p)
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
-	"github.com/Muaz717/gym_app/app/internal/models"
 	"github.com/Muaz717/gym_app/app/internal/storage"
 
 	"log/slog"

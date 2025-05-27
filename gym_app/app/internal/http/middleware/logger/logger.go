@@ -10,7 +10,7 @@ func New(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
-		log = log.With(
+		reqLog := log.With(
 			slog.String("component", "middleware/logger"),
 		)
 
@@ -18,7 +18,7 @@ func New(log *slog.Logger) gin.HandlerFunc {
 
 		duration := time.Since(start)
 
-		log.Info("HTTP Request",
+		reqLog.Info("HTTP Request",
 			slog.String("method", c.Request.Method),
 			slog.String("path", c.Request.URL.Path),
 			slog.Int("status", c.Writer.Status()),

@@ -37,9 +37,9 @@ func NewSSOClient(
 		grpcretry.WithPerRetryTimeout(timeout),
 	}
 
-	logOpts := []grpclog.Option{
-		//grpclog.WithLogOnEvents(grpclog.PayloadReceived, grpclog.PayloadSent),
-	}
+	//logOpts := []grpclog.Option{
+	//	//grpclog.WithLogOnEvents(grpclog.PayloadReceived, grpclog.PayloadSent),
+	//}
 
 	addr := net.JoinHostPort(host, port)
 
@@ -47,7 +47,7 @@ func NewSSOClient(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithChainUnaryInterceptor(
 			grpcretry.UnaryClientInterceptor(retryOpts...),
-			grpclog.UnaryClientInterceptor(InterceptorLogger(log), logOpts...),
+			//grpclog.UnaryClientInterceptor(InterceptorLogger(log), logOpts...),
 		),
 	)
 

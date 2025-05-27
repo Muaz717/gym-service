@@ -33,7 +33,7 @@ func NewRedis(cfg config.Redis) (*Redis, error) {
 	return &Redis{client: client}, nil
 }
 
-func (r *Redis) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+func (r *Redis) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	return r.client.Set(ctx, key, value, ttl).Err()
 }
 
@@ -43,6 +43,26 @@ func (r *Redis) Get(ctx context.Context, key string) (string, error) {
 
 func (r *Redis) Delete(ctx context.Context, key string) error {
 	return r.client.Del(ctx, key).Err()
+}
+
+func (r *Redis) DelByPrefix(ctx context.Context, prefix string) error {
+	var cursor uint64
+	for {
+		keys, nextCursor, err := r.client.Scan(ctx, cursor, prefix+"*", 100).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			if err := r.client.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+		cursor = nextCursor
+		if cursor == 0 {
+			break
+		}
+	}
+	return nil
 }
 
 func (r *Redis) Close() error {

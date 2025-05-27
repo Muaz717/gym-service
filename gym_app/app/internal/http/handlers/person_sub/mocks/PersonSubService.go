@@ -6,7 +6,9 @@ package mocks
 
 import (
 	"context"
-	"github.com/Muaz717/gym_app/app/internal/models"
+
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
+	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,7 +40,7 @@ func (_m *PersonSubService) EXPECT() *PersonSubService_Expecter {
 }
 
 // AddPersonSub provides a mock function for the type PersonSubService
-func (_mock *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDate models.PersonSubStrDate) (string, error) {
+func (_mock *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDate models.PersonSubscription) (string, error) {
 	ret := _mock.Called(ctx, personSubStrDate)
 
 	if len(ret) == 0 {
@@ -47,15 +49,15 @@ func (_mock *PersonSubService) AddPersonSub(ctx context.Context, personSubStrDat
 
 	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.PersonSubStrDate) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.PersonSubscription) (string, error)); ok {
 		return returnFunc(ctx, personSubStrDate)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, models.PersonSubStrDate) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.PersonSubscription) string); ok {
 		r0 = returnFunc(ctx, personSubStrDate)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, models.PersonSubStrDate) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, models.PersonSubscription) error); ok {
 		r1 = returnFunc(ctx, personSubStrDate)
 	} else {
 		r1 = ret.Error(1)
@@ -75,9 +77,9 @@ func (_e *PersonSubService_Expecter) AddPersonSub(ctx interface{}, personSubStrD
 	return &PersonSubService_AddPersonSub_Call{Call: _e.mock.On("AddPersonSub", ctx, personSubStrDate)}
 }
 
-func (_c *PersonSubService_AddPersonSub_Call) Run(run func(ctx context.Context, personSubStrDate models.PersonSubStrDate)) *PersonSubService_AddPersonSub_Call {
+func (_c *PersonSubService_AddPersonSub_Call) Run(run func(ctx context.Context, personSubStrDate models.PersonSubscription)) *PersonSubService_AddPersonSub_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.PersonSubStrDate))
+		run(args[0].(context.Context), args[1].(models.PersonSubscription))
 	})
 	return _c
 }
@@ -87,7 +89,7 @@ func (_c *PersonSubService_AddPersonSub_Call) Return(s string, err error) *Perso
 	return _c
 }
 
-func (_c *PersonSubService_AddPersonSub_Call) RunAndReturn(run func(ctx context.Context, personSubStrDate models.PersonSubStrDate) (string, error)) *PersonSubService_AddPersonSub_Call {
+func (_c *PersonSubService_AddPersonSub_Call) RunAndReturn(run func(ctx context.Context, personSubStrDate models.PersonSubscription) (string, error)) *PersonSubService_AddPersonSub_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -138,24 +140,81 @@ func (_c *PersonSubService_DeletePersonSub_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// FindPersonSubByPersonId provides a mock function for the type PersonSubService
+func (_mock *PersonSubService) FindPersonSubByPersonId(ctx context.Context, personID int) ([]dto.PersonSubResponse, error) {
+	ret := _mock.Called(ctx, personID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindPersonSubByPersonId")
+	}
+
+	var r0 []dto.PersonSubResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]dto.PersonSubResponse, error)); ok {
+		return returnFunc(ctx, personID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []dto.PersonSubResponse); ok {
+		r0 = returnFunc(ctx, personID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]dto.PersonSubResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, personID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PersonSubService_FindPersonSubByPersonId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindPersonSubByPersonId'
+type PersonSubService_FindPersonSubByPersonId_Call struct {
+	*mock.Call
+}
+
+// FindPersonSubByPersonId is a helper method to define mock.On call
+//   - ctx
+//   - personID
+func (_e *PersonSubService_Expecter) FindPersonSubByPersonId(ctx interface{}, personID interface{}) *PersonSubService_FindPersonSubByPersonId_Call {
+	return &PersonSubService_FindPersonSubByPersonId_Call{Call: _e.mock.On("FindPersonSubByPersonId", ctx, personID)}
+}
+
+func (_c *PersonSubService_FindPersonSubByPersonId_Call) Run(run func(ctx context.Context, personID int)) *PersonSubService_FindPersonSubByPersonId_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *PersonSubService_FindPersonSubByPersonId_Call) Return(personSubResponses []dto.PersonSubResponse, err error) *PersonSubService_FindPersonSubByPersonId_Call {
+	_c.Call.Return(personSubResponses, err)
+	return _c
+}
+
+func (_c *PersonSubService_FindPersonSubByPersonId_Call) RunAndReturn(run func(ctx context.Context, personID int) ([]dto.PersonSubResponse, error)) *PersonSubService_FindPersonSubByPersonId_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindPersonSubByPersonName provides a mock function for the type PersonSubService
-func (_mock *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name string) ([]models.PersonSubStrDate, error) {
+func (_mock *PersonSubService) FindPersonSubByPersonName(ctx context.Context, name string) ([]dto.PersonSubResponse, error) {
 	ret := _mock.Called(ctx, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindPersonSubByPersonName")
 	}
 
-	var r0 []models.PersonSubStrDate
+	var r0 []dto.PersonSubResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]models.PersonSubStrDate, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]dto.PersonSubResponse, error)); ok {
 		return returnFunc(ctx, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []models.PersonSubStrDate); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []dto.PersonSubResponse); ok {
 		r0 = returnFunc(ctx, name)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.PersonSubStrDate)
+			r0 = ret.Get(0).([]dto.PersonSubResponse)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -185,34 +244,34 @@ func (_c *PersonSubService_FindPersonSubByPersonName_Call) Run(run func(ctx cont
 	return _c
 }
 
-func (_c *PersonSubService_FindPersonSubByPersonName_Call) Return(personSubStrDates []models.PersonSubStrDate, err error) *PersonSubService_FindPersonSubByPersonName_Call {
-	_c.Call.Return(personSubStrDates, err)
+func (_c *PersonSubService_FindPersonSubByPersonName_Call) Return(personSubResponses []dto.PersonSubResponse, err error) *PersonSubService_FindPersonSubByPersonName_Call {
+	_c.Call.Return(personSubResponses, err)
 	return _c
 }
 
-func (_c *PersonSubService_FindPersonSubByPersonName_Call) RunAndReturn(run func(ctx context.Context, name string) ([]models.PersonSubStrDate, error)) *PersonSubService_FindPersonSubByPersonName_Call {
+func (_c *PersonSubService_FindPersonSubByPersonName_Call) RunAndReturn(run func(ctx context.Context, name string) ([]dto.PersonSubResponse, error)) *PersonSubService_FindPersonSubByPersonName_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllPersonSubs provides a mock function for the type PersonSubService
-func (_mock *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]models.PersonSubStrDate, error) {
+func (_mock *PersonSubService) GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllPersonSubs")
 	}
 
-	var r0 []models.PersonSubStrDate
+	var r0 []dto.PersonSubResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]models.PersonSubStrDate, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]dto.PersonSubResponse, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []models.PersonSubStrDate); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []dto.PersonSubResponse); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.PersonSubStrDate)
+			r0 = ret.Get(0).([]dto.PersonSubResponse)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
@@ -241,33 +300,33 @@ func (_c *PersonSubService_GetAllPersonSubs_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *PersonSubService_GetAllPersonSubs_Call) Return(personSubStrDates []models.PersonSubStrDate, err error) *PersonSubService_GetAllPersonSubs_Call {
-	_c.Call.Return(personSubStrDates, err)
+func (_c *PersonSubService_GetAllPersonSubs_Call) Return(personSubResponses []dto.PersonSubResponse, err error) *PersonSubService_GetAllPersonSubs_Call {
+	_c.Call.Return(personSubResponses, err)
 	return _c
 }
 
-func (_c *PersonSubService_GetAllPersonSubs_Call) RunAndReturn(run func(ctx context.Context) ([]models.PersonSubStrDate, error)) *PersonSubService_GetAllPersonSubs_Call {
+func (_c *PersonSubService_GetAllPersonSubs_Call) RunAndReturn(run func(ctx context.Context) ([]dto.PersonSubResponse, error)) *PersonSubService_GetAllPersonSubs_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetPersonSubByNumber provides a mock function for the type PersonSubService
-func (_mock *PersonSubService) GetPersonSubByNumber(ctx context.Context, number string) (models.PersonSubStrDate, error) {
+func (_mock *PersonSubService) GetPersonSubByNumber(ctx context.Context, number string) (dto.PersonSubResponse, error) {
 	ret := _mock.Called(ctx, number)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPersonSubByNumber")
 	}
 
-	var r0 models.PersonSubStrDate
+	var r0 dto.PersonSubResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.PersonSubStrDate, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (dto.PersonSubResponse, error)); ok {
 		return returnFunc(ctx, number)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.PersonSubStrDate); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) dto.PersonSubResponse); ok {
 		r0 = returnFunc(ctx, number)
 	} else {
-		r0 = ret.Get(0).(models.PersonSubStrDate)
+		r0 = ret.Get(0).(dto.PersonSubResponse)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, number)
@@ -296,12 +355,12 @@ func (_c *PersonSubService_GetPersonSubByNumber_Call) Run(run func(ctx context.C
 	return _c
 }
 
-func (_c *PersonSubService_GetPersonSubByNumber_Call) Return(personSubStrDate models.PersonSubStrDate, err error) *PersonSubService_GetPersonSubByNumber_Call {
-	_c.Call.Return(personSubStrDate, err)
+func (_c *PersonSubService_GetPersonSubByNumber_Call) Return(personSubResponse dto.PersonSubResponse, err error) *PersonSubService_GetPersonSubByNumber_Call {
+	_c.Call.Return(personSubResponse, err)
 	return _c
 }
 
-func (_c *PersonSubService_GetPersonSubByNumber_Call) RunAndReturn(run func(ctx context.Context, number string) (models.PersonSubStrDate, error)) *PersonSubService_GetPersonSubByNumber_Call {
+func (_c *PersonSubService_GetPersonSubByNumber_Call) RunAndReturn(run func(ctx context.Context, number string) (dto.PersonSubResponse, error)) *PersonSubService_GetPersonSubByNumber_Call {
 	_c.Call.Return(run)
 	return _c
 }
