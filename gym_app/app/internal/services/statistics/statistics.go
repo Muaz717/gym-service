@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	"github.com/Muaz717/gym_app/app/internal/services/cache"
 	"log/slog"
@@ -17,6 +18,7 @@ type StatStorage interface {
 	Income(ctx context.Context, from, to time.Time) (float64, error)
 	SoldSubscriptions(ctx context.Context, from, to time.Time) (int, error)
 	TotalSoldSubscriptions(ctx context.Context) (int, error)
+	MonthlyStatistics(ctx context.Context, from, to time.Time) ([]dto.MonthlyStat, error)
 }
 
 type StatCache interface {
@@ -39,6 +41,35 @@ func New(
 		statStorage: statStorage,
 		statCache:   statCache,
 	}
+}
+
+func (s *StatService) MonthlyStatistics(ctx context.Context, from, to time.Time) ([]dto.MonthlyStat, error) {
+	const op = "services.statistics.monthlyStatistics"
+	log := s.log.With(slog.String("op", op))
+
+	cacheKey := fmt.Sprintf("stat:monthly_stats:%s:%s", from.Format("2006-01-02"), to.Format("2006-01-02"))
+	if cached, err := s.statCache.Get(ctx, cacheKey); err == nil {
+		var monthlyStats []dto.MonthlyStat
+		if err := json.Unmarshal([]byte(cached), &monthlyStats); err == nil {
+			log.Info("cache hit", slog.String("key", cacheKey))
+			return monthlyStats, nil
+		}
+		log.Warn("failed to unmarshal cached data", sl.Error(err))
+	} else {
+		log.Info("cache miss", slog.String("key", cacheKey))
+	}
+
+	stats, err := s.statStorage.MonthlyStatistics(ctx, from, to)
+	if err != nil {
+		log.Error("failed to get monthly statistics", sl.Error(err))
+		return nil, err
+	}
+
+	if data, err := json.Marshal(stats); err == nil {
+		_ = s.statCache.Set(ctx, cacheKey, data, 10*time.Minute)
+	}
+
+	return stats, nil
 }
 
 func (s *StatService) TotalClients(ctx context.Context) (int, error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	personService "github.com/Muaz717/gym_app/app/internal/services/person"
 	statService "github.com/Muaz717/gym_app/app/internal/services/statistics"
+	subFreezeService "github.com/Muaz717/gym_app/app/internal/services/sub_freeze"
 	subscriptionService "github.com/Muaz717/gym_app/app/internal/services/subscription"
 	"github.com/Muaz717/gym_app/app/internal/storage/postgres"
 	"github.com/Muaz717/gym_app/app/internal/storage/redis"
@@ -57,10 +58,11 @@ func New(
 	personSubSrv := personSubService.New(log, storage, cache, storage, cache)
 	authSrv := authService.New(log, ssoClient, cfg.AppID)
 	statSrv := statService.New(log, storage, cache)
+	freezeSrv := subFreezeService.New(log, storage, cache)
 
 	cr := cron.New(personSubSrv)
 
-	httpApplication := httpApp.New(ctx, log, *cfg, ssoClient, authSrv, personSrv, subscriptionSrv, personSubSrv, statSrv)
+	httpApplication := httpApp.New(ctx, log, *cfg, ssoClient, authSrv, personSrv, subscriptionSrv, personSubSrv, statSrv, freezeSrv)
 
 	return &App{
 		HTTPSrv: httpApplication,

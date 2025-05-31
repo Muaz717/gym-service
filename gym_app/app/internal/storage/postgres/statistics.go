@@ -3,10 +3,47 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 	"time"
 )
 
 // Методы статистики реализуются на основной структуре Storage
+
+// MonthlyStatistics возвращает агрегированные данные по месяцам для статистики
+func (s *Storage) MonthlyStatistics(ctx context.Context, from, to time.Time) ([]dto.MonthlyStat, error) {
+	const query = `
+			SELECT
+				DATE_TRUNC('month', ps.start_date) as month,
+				COALESCE(SUM(s.price - ps.discount), 0) as income,
+				COUNT(DISTINCT ps.person_id) as new_clients,
+				COUNT(*) as sold_subscriptions
+			FROM person_subscriptions ps
+			JOIN subscriptions s ON ps.subscription_id = s.id
+			WHERE ps.start_date >= $1 AND ps.start_date <= $2
+			GROUP BY month
+			ORDER BY month
+		`
+
+	rows, err := s.db.Query(ctx, query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("MonthlyStatistics: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []dto.MonthlyStat
+	for rows.Next() {
+		var stat dto.MonthlyStat
+		err := rows.Scan(&stat.Month, &stat.Income, &stat.NewClients, &stat.SoldSubscriptions)
+		if err != nil {
+			return nil, fmt.Errorf("MonthlyStatistics rows.Scan: %w", err)
+		}
+		stats = append(stats, stat)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("MonthlyStatistics rows.Err: %w", err)
+	}
+	return stats, nil
+}
 
 // TotalClients возвращает общее количество клиентов
 func (s *Storage) TotalClients(ctx context.Context) (int, error) {

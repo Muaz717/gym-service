@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Добавляем поля subscription_price и final_price в запросы/запись
+// Добавляем поля subscription_price, final_price, freeze_days и used_freeze_days в запросы/запись
 
 func (s *Storage) AddPersonSub(ctx context.Context, personSub models.PersonSubscription) (string, error) {
 	const op = "storage.postgres.AddPersonSub"
@@ -67,7 +67,13 @@ func (s *Storage) GetPersonSubByNumber(ctx context.Context, number string) (dto.
 		        ps.status,
        			p.full_name AS person_name,
 				ps.discount,
-				ps.final_price
+				ps.final_price,
+				s.freeze_days,
+				COALESCE((
+					SELECT SUM(EXTRACT(DAY FROM (COALESCE(freeze_end, NOW()) - freeze_start)))
+					FROM subscription_freeze
+					WHERE subscription_number = ps.number
+				), 0) as used_freeze_days
 		FROM person_subscriptions ps
 		JOIN person p ON ps.person_id = p.id
 		JOIN subscriptions s ON ps.subscription_id = s.id
@@ -87,6 +93,8 @@ func (s *Storage) GetPersonSubByNumber(ctx context.Context, number string) (dto.
 		&personSub.PersonName,
 		&personSub.Discount,
 		&personSub.FinalPrice,
+		&personSub.FreezeDays,
+		&personSub.UsedFreezeDays,
 	)
 
 	if err != nil {
@@ -120,20 +128,30 @@ func (s *Storage) GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse
 	const op = "storage.postgres.GetAllPersonSubs"
 
 	query := `
-		SELECT 	ps.number,
-		        ps.person_id,
-		        ps.subscription_id,
-		        s.title AS subscription_title,
-				ps.subscription_price,
-		        ps.start_date,
-		        ps.end_date,
-		        ps.status,
-       			p.full_name AS person_name,
-				ps.discount,
-				ps.final_price
-		FROM person_subscriptions ps
-		JOIN person p ON ps.person_id = p.id
-		JOIN subscriptions s ON ps.subscription_id = s.id
+	SELECT
+    	ps.number,
+    	ps.person_id,
+		ps.subscription_id,
+		s.title AS subscription_title,
+		ps.subscription_price,
+		ps.start_date,
+		ps.end_date,
+		ps.status,
+		p.full_name AS person_name,
+		ps.discount,
+		ps.final_price,
+		s.freeze_days,
+    	COALESCE((
+			SELECT SUM(EXTRACT(DAY FROM (COALESCE(freeze_end, NOW()) - freeze_start)))
+			FROM subscription_freeze
+			WHERE subscription_number = ps.number
+    	), 0) as used_freeze_days
+	FROM person_subscriptions ps
+	JOIN person p ON ps.person_id = p.id
+	JOIN subscriptions s ON ps.subscription_id = s.id
+	ORDER BY
+    	ps.number ~ '[^0-9]',
+    	CASE WHEN ps.number ~ '^[0-9]+$' THEN CAST(ps.number AS INTEGER) END DESC
 	`
 
 	rows, err := s.db.Query(ctx, query)
@@ -160,6 +178,8 @@ func (s *Storage) GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse
 			&sub.PersonName,
 			&sub.Discount,
 			&sub.FinalPrice,
+			&sub.FreezeDays,
+			&sub.UsedFreezeDays,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
@@ -194,7 +214,13 @@ func (s *Storage) FindPersonSubByPersonName(ctx context.Context, name string) ([
 		       ps.status,
 		       p.full_name AS person_name,
 			   ps.discount,
-			   ps.final_price
+			   ps.final_price,
+			   s.freeze_days,
+			   COALESCE((
+					SELECT SUM(EXTRACT(DAY FROM (COALESCE(freeze_end, NOW()) - freeze_start)))
+					FROM subscription_freeze
+					WHERE subscription_number = ps.number
+			   ), 0) as used_freeze_days
 		FROM person_subscriptions ps
 		JOIN person p ON ps.person_id = p.id
 		JOIN subscriptions s ON ps.subscription_id = s.id
@@ -222,6 +248,8 @@ func (s *Storage) FindPersonSubByPersonName(ctx context.Context, name string) ([
 			&sub.PersonName,
 			&sub.Discount,
 			&sub.FinalPrice,
+			&sub.FreezeDays,
+			&sub.UsedFreezeDays,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s: scan: %w", op, err)
@@ -261,7 +289,13 @@ func (s *Storage) FindPersonSubByPersonId(ctx context.Context, personId int) ([]
 		       ps.status,
 		       p.full_name AS person_name,
 			   ps.discount,
-			   ps.final_price
+			   ps.final_price,
+			   s.freeze_days,
+			   COALESCE((
+					SELECT SUM(EXTRACT(DAY FROM (COALESCE(freeze_end, NOW()) - freeze_start)))
+					FROM subscription_freeze
+					WHERE subscription_number = ps.number
+			   ), 0) as used_freeze_days
 		FROM person_subscriptions ps
 		JOIN person p ON ps.person_id = p.id
 		JOIN subscriptions s ON ps.subscription_id = s.id
@@ -289,6 +323,8 @@ func (s *Storage) FindPersonSubByPersonId(ctx context.Context, personId int) ([]
 			&sub.PersonName,
 			&sub.Discount,
 			&sub.FinalPrice,
+			&sub.FreezeDays,
+			&sub.UsedFreezeDays,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s: scan: %w", op, err)

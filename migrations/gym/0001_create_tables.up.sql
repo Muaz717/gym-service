@@ -1,5 +1,5 @@
 -- Таблица клиентов
-CREATE TABLE person (
+CREATE TABLE IF NOT EXISTS person (
     id BIGSERIAL PRIMARY KEY,
     full_name TEXT NOT NULL,
     phone VARCHAR(20) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE person (
 );
 
 -- Таблица абонементов (используем номер карты вместо id)
-CREATE TABLE subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
     id BIGSERIAL PRIMARY KEY,       -- Номер абонемента с карты
     title TEXT NOT NULL,            -- Название тарифа
     price NUMERIC(10, 2) NOT NULL,   -- Цена тарифа
@@ -16,7 +16,7 @@ CREATE TABLE subscriptions (
 );
 
 -- Таблица подписок клиента на абонементы
-CREATE TABLE person_subscriptions (
+CREATE TABLE IF NOT EXISTS person_subscriptions (
     number varchar(32) PRIMARY KEY,
     person_id BIGINT NOT NULL REFERENCES person(id) ON DELETE CASCADE,
     subscription_id BIGINT NOT NULL REFERENCES subscriptions(id) ON DELETE RESTRICT,
@@ -24,3 +24,4 @@ CREATE TABLE person_subscriptions (
     end_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' -- active / frozen / completed
 );
+

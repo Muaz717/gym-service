@@ -1,4 +1,4 @@
-package models
+package dto
 
 type User struct {
 	UserID int64    `json:"user_id"`

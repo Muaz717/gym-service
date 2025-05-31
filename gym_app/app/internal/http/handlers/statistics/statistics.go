@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"context"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 	"github.com/Muaz717/gym_app/app/internal/lib/api/response"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ type StatService interface {
 	Income(ctx context.Context, from, to time.Time) (float64, error)
 	TotalSoldSubscriptions(ctx context.Context) (int, error)
 	SoldSubscriptions(ctx context.Context, from, to time.Time) (int, error)
+	MonthlyStatistics(ctx context.Context, from, to time.Time) ([]dto.MonthlyStat, error)
 }
 
 type StatHandler struct {
@@ -35,6 +37,47 @@ func New(
 		log:         log,
 		statService: statService,
 	}
+}
+
+func (h *StatHandler) MonthlyStatistics(c *gin.Context) {
+	const op = "handlers.statistics.monthlyStatistics"
+	log := h.log.With(slog.String("op", op))
+
+	fromStr := c.Query("from")
+	toStr := c.Query("to")
+
+	if fromStr == "" || toStr == "" {
+		c.JSON(http.StatusBadRequest, response.Error("Missing 'from' or 'to' date"))
+		return
+	}
+
+	from, err := time.Parse(time.RFC3339, fromStr)
+	if err != nil {
+		log.Error("failed to parse 'from' date", sl.Error(err))
+		c.JSON(http.StatusBadRequest, response.Error("Invalid 'from' date format"))
+		return
+	}
+
+	to, err := time.Parse(time.RFC3339, toStr)
+	if err != nil {
+		log.Error("failed to parse 'to' date", sl.Error(err))
+		c.JSON(http.StatusBadRequest, response.Error("Invalid 'to' date format"))
+		return
+	}
+
+	if from.After(to) {
+		c.JSON(http.StatusBadRequest, response.Error("'from' date must be before 'to' date"))
+		return
+	}
+
+	stats, err := h.statService.MonthlyStatistics(c.Request.Context(), from, to)
+	if err != nil {
+		log.Error("failed to get monthly statistics", sl.Error(err))
+		c.JSON(http.StatusInternalServerError, response.Error("Internal server error"))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"statistics": stats})
 }
 
 func (h *StatHandler) TotalClients(c *gin.Context) {

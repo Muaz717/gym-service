@@ -10,6 +10,7 @@ import (
 	personHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person"
 	personSubHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person_sub"
 	statHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/statistics"
+	subFreezeHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/sub_freeze"
 	subscriptionHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/subscription"
 	authMiddleware "github.com/Muaz717/gym_app/app/internal/http/middleware/auth"
 	loggerMiddleware "github.com/Muaz717/gym_app/app/internal/http/middleware/logger"
@@ -49,6 +50,7 @@ func New(
 	subscriptionService subscriptionHandler.SubscriptionService,
 	personSubService personSubHandler.PersonSubService,
 	statService statHandler.StatService,
+	subFreezeService subFreezeHandler.SubFreezeService,
 ) *HttpApp {
 
 	personHandle := personHandler.New(ctx, log, personService)
@@ -56,6 +58,7 @@ func New(
 	personSubHandle := personSubHandler.New(ctx, log, personSubService)
 	authHandle := authHandler.New(ctx, log, authService)
 	statHandle := statHandler.New(ctx, log, statService)
+	freezeHandle := subFreezeHandler.New(ctx, log, subFreezeService)
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
@@ -115,6 +118,16 @@ func New(
 			adminPersonSub.DELETE("delete/:number", personSubHandle.DeletePersonSub)
 		}
 
+		freeze := api.Group("/freeze")
+		{
+			freeze.GET("", freezeHandle.GetAllActiveFreeze)
+
+			adminFreeze := freeze.Group("")
+			adminFreeze.Use(adminMiddleware)
+			adminFreeze.POST("/add", freezeHandle.FreezeSubscription)
+			adminFreeze.POST("/unfreeze", freezeHandle.UnfreezeSubscription)
+		}
+
 		// --- STATISTICS ROUTES ---
 		statistics := api.Group("/statistics")
 		{
@@ -124,8 +137,11 @@ func New(
 			statistics.GET("/income", statHandle.Income)
 			statistics.GET("/total_sold_subscriptions", statHandle.TotalSoldSubscriptions)
 			statistics.GET("/sold_subscriptions", statHandle.SoldSubscriptions)
+			statistics.GET("/monthly", statHandle.MonthlyStatistics)
 		}
 		// --- END STATISTICS ROUTES ---
+
+		//
 	}
 
 	srv := &http.Server{

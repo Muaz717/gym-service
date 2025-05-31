@@ -3,7 +3,7 @@ package authService
 import (
 	"context"
 	"fmt"
-	"github.com/Muaz717/gym_app/app/internal/domain/models"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	ssov1 "github.com/Muaz717/gym_app/app/pkg/sso"
 
@@ -71,7 +71,7 @@ func (a *AuthService) RegisterNewUser(ctx context.Context, email, password strin
 	return userId, nil
 }
 
-func (a *AuthService) CheckToken(ctx context.Context, token string) (models.User, error) {
+func (a *AuthService) CheckToken(ctx context.Context, token string) (dto.User, error) {
 	const op = "services.auth.checkToken"
 
 	log := a.log.With(
@@ -83,15 +83,15 @@ func (a *AuthService) CheckToken(ctx context.Context, token string) (models.User
 	resp, err := a.ssoClient.CheckToken(ctx, a.appId, token)
 	if err != nil {
 		log.Error("failed to check token", slog.String("token", token), sl.Error(err))
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
+		return dto.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("token is valid")
 	return CheckTokenResponseToUser(resp), nil
 }
 
-func CheckTokenResponseToUser(resp *ssov1.CheckTokenResponse) models.User {
-	return models.User{
+func CheckTokenResponseToUser(resp *ssov1.CheckTokenResponse) dto.User {
+	return dto.User{
 		UserID: resp.UserId,
 		Email:  resp.Email,
 		Roles:  resp.Roles,

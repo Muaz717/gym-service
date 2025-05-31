@@ -87,7 +87,7 @@ func (h *PersonHandler) AddPerson(c *gin.Context) {
 	personId, err := h.personService.AddPerson(h.ctx, person)
 	if err != nil {
 		if errors.Is(err, personService.ErrPersonExists) {
-			c.JSON(http.StatusConflict, response.Error("person already exists"))
+			c.JSON(http.StatusConflict, response.Error("Пользователь с таким именем и телефоном уже существует. Укажите другое имя или телефон"))
 			return
 		}
 

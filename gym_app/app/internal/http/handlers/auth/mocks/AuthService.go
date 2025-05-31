@@ -6,8 +6,8 @@ package mocks
 
 import (
 	"context"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 
-	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -39,22 +39,22 @@ func (_m *AuthService) EXPECT() *AuthService_Expecter {
 }
 
 // CheckToken provides a mock function for the type AuthService
-func (_mock *AuthService) CheckToken(ctx context.Context, token string) (models.User, error) {
+func (_mock *AuthService) CheckToken(ctx context.Context, token string) (dto.User, error) {
 	ret := _mock.Called(ctx, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CheckToken")
 	}
 
-	var r0 models.User
+	var r0 dto.User
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.User, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (dto.User, error)); ok {
 		return returnFunc(ctx, token)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.User); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) dto.User); ok {
 		r0 = returnFunc(ctx, token)
 	} else {
-		r0 = ret.Get(0).(models.User)
+		r0 = ret.Get(0).(dto.User)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, token)
@@ -83,12 +83,12 @@ func (_c *AuthService_CheckToken_Call) Run(run func(ctx context.Context, token s
 	return _c
 }
 
-func (_c *AuthService_CheckToken_Call) Return(user models.User, err error) *AuthService_CheckToken_Call {
+func (_c *AuthService_CheckToken_Call) Return(user dto.User, err error) *AuthService_CheckToken_Call {
 	_c.Call.Return(user, err)
 	return _c
 }
 
-func (_c *AuthService_CheckToken_Call) RunAndReturn(run func(ctx context.Context, token string) (models.User, error)) *AuthService_CheckToken_Call {
+func (_c *AuthService_CheckToken_Call) RunAndReturn(run func(ctx context.Context, token string) (dto.User, error)) *AuthService_CheckToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

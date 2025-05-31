@@ -2,7 +2,7 @@ package authHandler
 
 import (
 	"context"
-	"github.com/Muaz717/gym_app/app/internal/domain/models"
+	"github.com/Muaz717/gym_app/app/internal/domain/dto"
 	"github.com/Muaz717/gym_app/app/internal/lib/api/response"
 	"github.com/Muaz717/gym_app/app/internal/lib/grpcerrors"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
@@ -16,7 +16,7 @@ import (
 type AuthService interface {
 	Login(ctx context.Context, email, password string) (string, error)
 	RegisterNewUser(ctx context.Context, email, password string) (int64, error)
-	CheckToken(ctx context.Context, token string) (models.User, error)
+	CheckToken(ctx context.Context, token string) (dto.User, error)
 }
 
 type AuthHandler struct {
@@ -57,7 +57,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	var req models.LoginRequest
+	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("failed to bind json", slog.String("op", op), sl.Error(err))
@@ -99,7 +99,7 @@ func (h *AuthHandler) RegisterNewUser(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	var req models.RegisterRequest
+	var req dto.RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("failed to bind json", slog.String("op", op), sl.Error(err))

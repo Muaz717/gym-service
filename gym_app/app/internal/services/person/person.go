@@ -63,6 +63,8 @@ func (p *PersonService) invalidateStatisticsCache(ctx context.Context) {
 	_ = p.statCache.DelByPrefix(ctx, "stat:income:")
 	_ = p.statCache.DelByPrefix(ctx, "stat:sold_subs:")
 	_ = p.statCache.DelByPrefix(ctx, "stat:new_clients:")
+	_ = p.statCache.DelByPrefix(ctx, "stat:monthly_stats:")
+	_ = p.statCache.Delete(ctx, "stat:monthly_stats")
 	_ = p.statCache.Delete(ctx, "stat:income")
 	_ = p.statCache.Delete(ctx, "stat:total_clients")
 	_ = p.statCache.Delete(ctx, "stat:sold_subs")

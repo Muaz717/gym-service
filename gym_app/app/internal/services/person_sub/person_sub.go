@@ -18,6 +18,7 @@ const (
 	activeStatus  = "active"
 	frozenStatus  = "frozen"
 	expiredStatus = "expired"
+	closedStatus  = "closed"
 )
 
 type PersonSubStorage interface {
@@ -40,7 +41,6 @@ type PersonSubCache interface {
 
 type StatCache interface {
 	cache.Cache
-	DelByPrefix(ctx context.Context, prefix string) error
 }
 
 type PersonSubService struct {
@@ -78,6 +78,8 @@ func (p *PersonSubService) invalidateStatisticsCache(ctx context.Context) {
 	_ = p.statCache.DelByPrefix(ctx, "stat:income:")
 	_ = p.statCache.DelByPrefix(ctx, "stat:sold_subs:")
 	_ = p.statCache.DelByPrefix(ctx, "stat:new_clients:")
+	_ = p.statCache.DelByPrefix(ctx, "stat:monthly_stats:")
+	_ = p.statCache.Delete(ctx, "stat:monthly_stats")
 	_ = p.statCache.Delete(ctx, "stat:income")
 	_ = p.statCache.Delete(ctx, "stat:total_clients")
 	_ = p.statCache.Delete(ctx, "stat:sold_subs")
@@ -86,7 +88,7 @@ func (p *PersonSubService) invalidateStatisticsCache(ctx context.Context) {
 	_ = p.statCache.Delete(ctx, "stat:total_income")
 }
 
-func (p *PersonSubService) AddPersonSub(ctx context.Context, personSub models.PersonSubscription) (string, error) {
+func (p *PersonSubService) AddPersonSub(ctx context.Context, input dto.PersonSubInput) (string, error) {
 	const op = "services.personSub.AddPersonSub"
 
 	log := p.log.With(
@@ -95,20 +97,51 @@ func (p *PersonSubService) AddPersonSub(ctx context.Context, personSub models.Pe
 
 	log.Info("Adding new person subscription")
 
+	// Преобразование строковых дат в time.Time с учетом локальной временной зоны
+	layout := "2006-01-02"
+	loc := time.Local
+
+	var startDate, endDate time.Time
+	var err error
+
+	if input.StartDate != "" {
+		startDate, err = time.ParseInLocation(layout, input.StartDate, loc)
+		if err != nil {
+			log.Error("failed to parse start_date", sl.Error(err))
+			return "", fmt.Errorf("%s: invalid start_date: %w", op, err)
+		}
+	}
+
+	if input.EndDate != "" {
+		endDate, err = time.ParseInLocation(layout, input.EndDate, loc)
+		if err != nil {
+			log.Error("failed to parse end_date", sl.Error(err))
+			return "", fmt.Errorf("%s: invalid end_date: %w", op, err)
+		}
+	}
+
+	// Собираем структуру для сохранения в базу
+	personSub := models.PersonSubscription{
+		Number:            input.Number,
+		PersonID:          input.PersonID,
+		SubscriptionID:    input.SubscriptionID,
+		SubscriptionPrice: input.SubscriptionPrice,
+		StartDate:         startDate,
+		EndDate:           endDate,
+		Status:            input.Status,
+		Discount:          input.Discount,
+		FinalPrice:        input.FinalPrice,
+	}
+
 	personSubNumber, err := p.personSubStorage.AddPersonSub(ctx, personSub)
 	if err != nil {
-
 		if errors.Is(err, storage.ErrSubscriptionExists) {
 			log.Warn("subscription already exists", slog.String("number", personSub.Number), sl.Error(err))
-
 			return "", fmt.Errorf("%s: %w", op, ErrSubExists)
 		} else if errors.Is(err, storage.ErrPersonNotFound) {
-
 			log.Warn("person not found", slog.String("number", personSub.Number), sl.Error(err))
-
 			return "", fmt.Errorf("%s: %w", op, ErrPersonNotFound)
 		}
-
 		log.Error("failed to add person subscription", sl.Error(err))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}

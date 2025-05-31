@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/Muaz717/gym_app/app/internal/domain/dto"
-	"github.com/Muaz717/gym_app/app/internal/domain/models"
 	"github.com/Muaz717/gym_app/app/internal/lib/api/response"
 	"github.com/Muaz717/gym_app/app/internal/lib/logger/sl"
 	personSubService "github.com/Muaz717/gym_app/app/internal/services/person_sub"
@@ -17,7 +16,7 @@ import (
 )
 
 type PersonSubService interface {
-	AddPersonSub(ctx context.Context, personSubStrDate models.PersonSubscription) (string, error)
+	AddPersonSub(ctx context.Context, personSubStrDate dto.PersonSubInput) (string, error)
 	GetPersonSubByNumber(ctx context.Context, number string) (dto.PersonSubResponse, error)
 	GetAllPersonSubs(ctx context.Context) ([]dto.PersonSubResponse, error)
 	DeletePersonSub(ctx context.Context, number string) error
@@ -60,7 +59,7 @@ func (h *PersonSubHandler) AddPersonSub(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	var personSub models.PersonSubscription
+	var personSub dto.PersonSubInput
 
 	if err := c.ShouldBindJSON(&personSub); err != nil {
 		if errors.Is(err, io.EOF) {
@@ -75,6 +74,8 @@ func (h *PersonSubHandler) AddPersonSub(c *gin.Context) {
 		return
 	}
 
+	log.Info("", personSub)
+
 	if err := personSub.Validate(); err != nil {
 		log.Error("failed to validate person subscription", err)
 		c.JSON(http.StatusBadRequest, err)
@@ -85,7 +86,7 @@ func (h *PersonSubHandler) AddPersonSub(c *gin.Context) {
 	if err != nil {
 
 		if errors.Is(err, personSubService.ErrSubExists) {
-			c.JSON(http.StatusConflict, gin.H{"error": "subscription with that number already exists"})
+			c.JSON(http.StatusConflict, gin.H{"error": "Абонемент с таким номером уже существует"})
 			return
 		}
 
