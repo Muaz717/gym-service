@@ -14,10 +14,19 @@ import (
 type StatStorage interface {
 	TotalClients(ctx context.Context) (int, error)
 	NewClients(ctx context.Context, from, to time.Time) (int, error)
-	TotalIncome(ctx context.Context) (float64, error)
-	Income(ctx context.Context, from, to time.Time) (float64, error)
+
+	// Статистика по продажам разовых посещений
+	TotalSingleVisits(ctx context.Context) (int, error)
+	SingleVisits(ctx context.Context, from, to time.Time) (int, error)
+	SingleVisitsIncome(ctx context.Context) (float64, error)
+
+	// Статистика по продажам абонементов
 	SoldSubscriptions(ctx context.Context, from, to time.Time) (int, error)
 	TotalSoldSubscriptions(ctx context.Context) (int, error)
+
+	TotalIncome(ctx context.Context) (float64, error)
+	Income(ctx context.Context, from, to time.Time) (float64, error)
+
 	MonthlyStatistics(ctx context.Context, from, to time.Time) ([]dto.MonthlyStat, error)
 }
 
@@ -232,4 +241,43 @@ func (s *StatService) SoldSubscriptions(ctx context.Context, from, to time.Time)
 	}
 
 	return soldSubs, nil
+}
+
+func (s *StatService) TotalSingleVisits(ctx context.Context) (int, error) {
+	const op = "services.statistics.TotalSingleVisits"
+	log := s.log.With(slog.String("op", op))
+
+	singleVisits, err := s.statStorage.TotalSingleVisits(ctx)
+	if err != nil {
+		log.Error("failed to get Total Single Visits", sl.Error(err))
+		return 0, err
+	}
+
+	return singleVisits, err
+}
+
+func (s *StatService) SingleVisits(ctx context.Context, from, to time.Time) (int, error) {
+	const op = "services.statistics.SingleVisits"
+	log := s.log.With(slog.String("op", op))
+
+	singleVisits, err := s.statStorage.SingleVisits(ctx, from, to)
+	if err != nil {
+		log.Error("failed to get Single Visits", sl.Error(err))
+		return 0, err
+	}
+
+	return singleVisits, err
+}
+
+func (s *StatService) SingleVisitsIncome(ctx context.Context) (float64, error) {
+	const op = "services.statistics.SingleVisitsIncome"
+	log := s.log.With(slog.String("op", op))
+
+	income, err := s.statStorage.SingleVisitsIncome(ctx)
+	if err != nil {
+		log.Error("failed to get Single Visits Income", sl.Error(err))
+		return 0, err
+	}
+
+	return income, nil
 }

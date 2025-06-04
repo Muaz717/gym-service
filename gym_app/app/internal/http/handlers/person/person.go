@@ -25,18 +25,15 @@ type PersonService interface {
 }
 
 type PersonHandler struct {
-	ctx           context.Context
 	log           *slog.Logger
 	personService PersonService
 }
 
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	personService PersonService,
 ) *PersonHandler {
 	return &PersonHandler{
-		ctx:           ctx,
 		log:           log,
 		personService: personService,
 	}
@@ -84,7 +81,7 @@ func (h *PersonHandler) AddPerson(c *gin.Context) {
 		return
 	}
 
-	personId, err := h.personService.AddPerson(h.ctx, person)
+	personId, err := h.personService.AddPerson(c.Request.Context(), person)
 	if err != nil {
 		if errors.Is(err, personService.ErrPersonExists) {
 			c.JSON(http.StatusConflict, response.Error("Пользователь с таким именем и телефоном уже существует. Укажите другое имя или телефон"))
@@ -157,7 +154,7 @@ func (h *PersonHandler) UpdatePerson(c *gin.Context) {
 		return
 	}
 
-	personId, err := h.personService.UpdatePerson(h.ctx, person, pID)
+	personId, err := h.personService.UpdatePerson(c.Request.Context(), person, pID)
 	if err != nil {
 		if errors.Is(err, personService.ErrPersonNotFound) {
 			c.JSON(http.StatusNotFound, response.Error("person not found"))
@@ -213,7 +210,7 @@ func (h *PersonHandler) DeletePerson(c *gin.Context) {
 		return
 	}
 
-	err = h.personService.DeletePerson(h.ctx, pID)
+	err = h.personService.DeletePerson(c.Request.Context(), pID)
 	if err != nil {
 		if errors.Is(err, personService.ErrPersonNotFound) {
 			c.JSON(http.StatusNotFound, response.Error("person not found"))
@@ -281,7 +278,7 @@ func (h *PersonHandler) FindAllPeople(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	people, err := h.personService.FindAllPeople(h.ctx)
+	people, err := h.personService.FindAllPeople(c.Request.Context())
 	if err != nil {
 		log.Error("failed to get people", sl.Error(err))
 
@@ -324,7 +321,7 @@ func (h *PersonHandler) FindPersonById(c *gin.Context) {
 		return
 	}
 
-	person, err := h.personService.FindPersonById(h.ctx, pID)
+	person, err := h.personService.FindPersonById(c.Request.Context(), pID)
 	if err != nil {
 		if errors.Is(err, personService.ErrPersonNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "person not found"})

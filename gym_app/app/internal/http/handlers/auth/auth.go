@@ -20,18 +20,15 @@ type AuthService interface {
 }
 
 type AuthHandler struct {
-	ctx         context.Context
 	log         *slog.Logger
 	authService AuthService
 }
 
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	authService AuthService,
 ) *AuthHandler {
 	return &AuthHandler{
-		ctx:         ctx,
 		log:         log,
 		authService: authService,
 	}
@@ -64,7 +61,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response.Error("failed to decode request"))
 	}
 
-	token, err := h.authService.Login(h.ctx, req.Email, req.Password)
+	token, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		log.Error("failed to login", slog.String("op", op), sl.Error(err))
 
@@ -107,7 +104,7 @@ func (h *AuthHandler) RegisterNewUser(c *gin.Context) {
 		return
 	}
 
-	userID, err := h.authService.RegisterNewUser(h.ctx, req.Email, req.Password)
+	userID, err := h.authService.RegisterNewUser(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		log.Error("failed to register new user", slog.String("op", op), sl.Error(err))
 

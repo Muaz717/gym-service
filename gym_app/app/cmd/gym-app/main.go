@@ -32,6 +32,7 @@ const (
 )
 
 func main() {
+
 	ctx := context.Background()
 
 	cfg := config.MustLoad()
@@ -56,7 +57,7 @@ func main() {
 
 	log.Info("stopping application", slog.String("signal", sign.String()))
 
-	application.HTTPSrv.Stop()
+	application.HTTPSrv.Stop(ctx)
 
 	log.Info("application stopped")
 }

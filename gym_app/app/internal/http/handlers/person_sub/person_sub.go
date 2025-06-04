@@ -25,14 +25,12 @@ type PersonSubService interface {
 }
 
 type PersonSubHandler struct {
-	ctx              context.Context
 	log              *slog.Logger
 	personSubService PersonSubService
 }
 
-func New(ctx context.Context, log *slog.Logger, personSubService PersonSubService) *PersonSubHandler {
+func New(log *slog.Logger, personSubService PersonSubService) *PersonSubHandler {
 	return &PersonSubHandler{
-		ctx:              ctx,
 		log:              log,
 		personSubService: personSubService,
 	}
@@ -82,7 +80,7 @@ func (h *PersonSubHandler) AddPersonSub(c *gin.Context) {
 		return
 	}
 
-	personSubNumber, err := h.personSubService.AddPersonSub(h.ctx, personSub)
+	personSubNumber, err := h.personSubService.AddPersonSub(c.Request.Context(), personSub)
 	if err != nil {
 
 		if errors.Is(err, personSubService.ErrSubExists) {
@@ -127,7 +125,7 @@ func (h *PersonSubHandler) DeletePersonSub(c *gin.Context) {
 
 	number := c.Param("number")
 
-	if err := h.personSubService.DeletePersonSub(h.ctx, number); err != nil {
+	if err := h.personSubService.DeletePersonSub(c.Request.Context(), number); err != nil {
 
 		if errors.Is(err, personSubService.ErrSubNotFound) {
 			log.Error("subscription not found", sl.Error(err))
@@ -164,7 +162,7 @@ func (h *PersonSubHandler) FindPersonSubByNumber(c *gin.Context) {
 
 	number := c.Param("number")
 
-	personSub, err := h.personSubService.GetPersonSubByNumber(h.ctx, number)
+	personSub, err := h.personSubService.GetPersonSubByNumber(c.Request.Context(), number)
 	if err != nil {
 		log.Error("failed to get person subscription by number", sl.Error(err))
 		c.JSON(http.StatusInternalServerError, response.Error("failed to get person subscription"))
@@ -191,7 +189,7 @@ func (h *PersonSubHandler) FindAllPersonSubs(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	personSubs, err := h.personSubService.GetAllPersonSubs(h.ctx)
+	personSubs, err := h.personSubService.GetAllPersonSubs(c.Request.Context())
 	if err != nil {
 		log.Error("failed to get all person subscriptions", sl.Error(err))
 		c.JSON(http.StatusInternalServerError, response.Error("failed to get all person subscriptions"))
@@ -229,7 +227,7 @@ func (h *PersonSubHandler) FindPersonSubByPersonName(c *gin.Context) {
 		return
 	}
 
-	personSubs, err := h.personSubService.FindPersonSubByPersonName(h.ctx, name)
+	personSubs, err := h.personSubService.FindPersonSubByPersonName(c.Request.Context(), name)
 	if err != nil {
 		if errors.Is(err, personSubService.ErrSubNotFound) {
 			log.Info("no subscriptions found for this person", slog.String("name", name))

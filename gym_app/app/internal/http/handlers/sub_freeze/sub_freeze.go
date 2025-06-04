@@ -16,18 +16,15 @@ type SubFreezeService interface {
 }
 
 type SubFreezeHandler struct {
-	ctx              context.Context
 	log              *slog.Logger
 	subFreezeService SubFreezeService
 }
 
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	subFreezeService SubFreezeService,
 ) *SubFreezeHandler {
 	return &SubFreezeHandler{
-		ctx:              ctx,
 		log:              log,
 		subFreezeService: subFreezeService,
 	}

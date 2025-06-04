@@ -23,18 +23,15 @@ type SubscriptionService interface {
 }
 
 type SubscriptionHandler struct {
-	ctx                 context.Context
 	log                 *slog.Logger
 	subscriptionService SubscriptionService
 }
 
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	subscriptionService SubscriptionService,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
-		ctx:                 ctx,
 		log:                 log,
 		subscriptionService: subscriptionService,
 	}
@@ -76,7 +73,7 @@ func (h *SubscriptionHandler) AddSubscription(c *gin.Context) {
 		return
 	}
 
-	subId, err := h.subscriptionService.AddSubscription(h.ctx, subscription)
+	subId, err := h.subscriptionService.AddSubscription(c.Request.Context(), subscription)
 	if err != nil {
 		log.Error("failed to add subscription", sl.Error(err))
 
@@ -138,7 +135,7 @@ func (h *SubscriptionHandler) UpdateSubscription(c *gin.Context) {
 		return
 	}
 
-	subId, err := h.subscriptionService.UpdateSubscription(h.ctx, subscription, subscriptionID)
+	subId, err := h.subscriptionService.UpdateSubscription(c.Request.Context(), subscription, subscriptionID)
 	if err != nil {
 		log.Error("failed to update subscription", sl.Error(err))
 
@@ -183,7 +180,7 @@ func (h *SubscriptionHandler) DeleteSubscription(c *gin.Context) {
 		return
 	}
 
-	err = h.subscriptionService.DeleteSubscription(h.ctx, subscriptionID)
+	err = h.subscriptionService.DeleteSubscription(c.Request.Context(), subscriptionID)
 	if err != nil {
 
 		if errors.Is(err, personSubService.ErrSubNotFound) {
@@ -218,7 +215,7 @@ func (h *SubscriptionHandler) FindAllSubscriptions(c *gin.Context) {
 		slog.String("op", op),
 	)
 
-	subscriptions, err := h.subscriptionService.FindAllSubscriptions(h.ctx)
+	subscriptions, err := h.subscriptionService.FindAllSubscriptions(c.Request.Context())
 	if err != nil {
 		log.Error("failed to get Subscriptions", sl.Error(err))
 

@@ -4,11 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/Muaz717/gym_app/app/internal/clients/sso/grpc"
 	"github.com/Muaz717/gym_app/app/internal/config"
 	authHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/auth"
 	personHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person"
 	personSubHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/person_sub"
+	singleVisitHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/single_visit"
 	statHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/statistics"
 	subFreezeHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/sub_freeze"
 	subscriptionHandler "github.com/Muaz717/gym_app/app/internal/http/handlers/subscription"
@@ -20,11 +26,6 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-
-	"log/slog"
-	"net"
-	"net/http"
-	"time"
 )
 
 const (
@@ -35,13 +36,11 @@ const (
 type HttpApp struct {
 	HTTPServer *http.Server
 	engine     *gin.Engine
-	ctx        context.Context
 	log        *slog.Logger
 	cfg        config.Config
 }
 
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	cfg config.Config,
 	ssoClient *grpc.SSOClient,
@@ -51,27 +50,31 @@ func New(
 	personSubService personSubHandler.PersonSubService,
 	statService statHandler.StatService,
 	subFreezeService subFreezeHandler.SubFreezeService,
+	singleVisitService singleVisitHandler.SingleVisitService,
 ) *HttpApp {
-
-	personHandle := personHandler.New(ctx, log, personService)
-	subscriptionHandle := subscriptionHandler.New(ctx, log, subscriptionService)
-	personSubHandle := personSubHandler.New(ctx, log, personSubService)
-	authHandle := authHandler.New(ctx, log, authService)
-	statHandle := statHandler.New(ctx, log, statService)
-	freezeHandle := subFreezeHandler.New(ctx, log, subFreezeService)
-
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 
 	setupMiddleware(engine, log, cfg)
 
+	if cfg.Env == "dev" {
+		engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
 	userMiddleware := authMiddleware.AuthMiddleware(log, ssoClient, cfg.AppID, userRole)
 	adminMiddleware := authMiddleware.AuthMiddleware(log, ssoClient, cfg.AppID, adminRole)
 
-	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
 	api := engine.Group("/api/v1")
 
+	authHandle := authHandler.New(log, authService)
+	personHandle := personHandler.New(log, personService)
+	subscriptionHandle := subscriptionHandler.New(log, subscriptionService)
+	personSubHandle := personSubHandler.New(log, personSubService)
+	statHandle := statHandler.New(log, statService)
+	freezeHandle := subFreezeHandler.New(log, subFreezeService)
+	singleVisitHandle := singleVisitHandler.New(log, singleVisitService)
+
+	// --- Auth routes ---
 	auth := api.Group("/auth")
 	{
 		auth.POST("/register", authHandle.RegisterNewUser)
@@ -81,67 +84,18 @@ func New(
 
 	api.Use(userMiddleware)
 	{
-		people := api.Group("/people")
-		{
-			people.GET("", personHandle.FindAllPeople)
-			people.GET("/find", personHandle.FindPersonByName)
-			people.GET("/find/:id", personHandle.FindPersonById)
-
-			adminPeople := people.Group("")
-			adminPeople.Use(adminMiddleware)
-			adminPeople.POST("/add", personHandle.AddPerson)
-			adminPeople.PUT("update/:id", personHandle.UpdatePerson)
-			adminPeople.DELETE("delete/:id", personHandle.DeletePerson)
-		}
-
-		subscription := api.Group("/subscription")
-		{
-			subscription.GET("", subscriptionHandle.FindAllSubscriptions)
-
-			adminSubscription := subscription.Group("")
-			adminSubscription.Use(adminMiddleware)
-			adminSubscription.POST("/add", subscriptionHandle.AddSubscription)
-			adminSubscription.PUT("update/:id", subscriptionHandle.UpdateSubscription)
-			adminSubscription.DELETE("delete/:id", subscriptionHandle.DeleteSubscription)
-		}
-
-		personSub := api.Group("/person_sub")
-		{
-			personSub.GET("find/:number", personSubHandle.FindPersonSubByNumber)
-			personSub.GET("", personSubHandle.FindAllPersonSubs)
-			personSub.GET("/find", personSubHandle.FindPersonSubByPersonName)
-			personSub.GET("/find/id/:id", personSubHandle.FindPersonSubByPersonId)
-
-			adminPersonSub := personSub.Group("")
-			adminPersonSub.Use(adminMiddleware)
-			adminPersonSub.POST("/add", personSubHandle.AddPersonSub)
-			adminPersonSub.DELETE("delete/:number", personSubHandle.DeletePersonSub)
-		}
-
-		freeze := api.Group("/freeze")
-		{
-			freeze.GET("", freezeHandle.GetAllActiveFreeze)
-
-			adminFreeze := freeze.Group("")
-			adminFreeze.Use(adminMiddleware)
-			adminFreeze.POST("/add", freezeHandle.FreezeSubscription)
-			adminFreeze.POST("/unfreeze", freezeHandle.UnfreezeSubscription)
-		}
-
-		// --- STATISTICS ROUTES ---
-		statistics := api.Group("/statistics")
-		{
-			statistics.GET("/total_clients", statHandle.TotalClients)
-			statistics.GET("/new_clients", statHandle.NewClients)
-			statistics.GET("/total_income", statHandle.TotalIncome)
-			statistics.GET("/income", statHandle.Income)
-			statistics.GET("/total_sold_subscriptions", statHandle.TotalSoldSubscriptions)
-			statistics.GET("/sold_subscriptions", statHandle.SoldSubscriptions)
-			statistics.GET("/monthly", statHandle.MonthlyStatistics)
-		}
-		// --- END STATISTICS ROUTES ---
-
-		//
+		// --- User routes ---
+		registerPersonRoutes(api, personHandle, adminMiddleware)
+		// --- Subscription routes ---
+		registerSubscriptionRoutes(api, subscriptionHandle, adminMiddleware)
+		// --- Person Subscription routes ---
+		registerPersonSubRoutes(api, personSubHandle, adminMiddleware)
+		// --- Freeze routes ---
+		registerFreezeRoutes(api, freezeHandle, adminMiddleware)
+		// --- Single Visit routes ---
+		registerSingleVisitRoutes(api, singleVisitHandle, adminMiddleware)
+		// --- Statistics routes ---
+		registerStatRoutes(api, statHandle)
 	}
 
 	srv := &http.Server{
@@ -155,7 +109,6 @@ func New(
 	return &HttpApp{
 		HTTPServer: srv,
 		engine:     engine,
-		ctx:        ctx,
 		log:        log,
 		cfg:        cfg,
 	}
@@ -164,11 +117,7 @@ func New(
 func (a *HttpApp) Run() error {
 	const op = "httpApp.Run"
 
-	log := a.log.With(
-		slog.String("op", op),
-		slog.String("addr", a.cfg.HTTPServer.Port),
-	)
-
+	log := a.log.With(slog.String("op", op))
 	log.Info("HTTP server is starting", slog.String("addr", a.cfg.HTTPServer.Port))
 
 	if err := a.HTTPServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -179,10 +128,10 @@ func (a *HttpApp) Run() error {
 	return nil
 }
 
-func (a *HttpApp) Stop() error {
+func (a *HttpApp) Stop(ctx context.Context) error {
 	const op = "httpApp.Stop"
 
-	ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	a.log.With(slog.String("op", op)).
@@ -198,19 +147,14 @@ func (a *HttpApp) Stop() error {
 
 func setupMiddleware(engine *gin.Engine, log *slog.Logger, cfg config.Config) {
 	corsConfig := cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-			"http://localhost:80",
-			"http://localhost",
-		},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:80", "http://localhost"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Cache-Control", "X-Requested-With"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
 	engine.Use(cors.New(corsConfig))
-
 	engine.Use(gin.Recovery())
 	engine.Use(loggerMiddleware.New(log))
 }
